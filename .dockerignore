@@ -1,0 +1,37 @@
+# Development artifacts
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Git
+.git/
+.gitignore
+
+# Docs and specs
+docs/
+*.pdf
+*.md
+
+# Secrets
+.env
+*.env
+
+# Dev tools
+tools/
+.pre-commit-config.yaml
+
+# CI
+.github/
+
+# Temp files
+/tmp/
+*.log
+celerybeat-schedule
+celerybeat.pid

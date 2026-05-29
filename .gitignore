@@ -1,0 +1,58 @@
+# ── Python ──────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ── Virtual Environments ─────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Environment & Secrets ────────────────────────────────────────
+.env
+*.env
+!.env.example
+
+# ── Testing & Coverage ───────────────────────────────────────────
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+.tox/
+
+# ── MyPy ─────────────────────────────────────────────────────────
+.mypy_cache/
+
+# ── Alembic ──────────────────────────────────────────────────────
+app/db/migrations/__pycache__/
+alembic/versions/*.pyc
+
+# ── IDE ──────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ── Docker ───────────────────────────────────────────────────────
+docker-compose.override.yml
+postgres_data/
+redis_data/
+
+# ── Temp Files ───────────────────────────────────────────────────
+/tmp/sokoflow_reports/
+*.pdf
+celerybeat-schedule
+celerybeat.pid
+
+# ── Logs ─────────────────────────────────────────────────────────
+*.log
+logs/

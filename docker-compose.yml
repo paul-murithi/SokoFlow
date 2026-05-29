@@ -1,0 +1,133 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sokoflow_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sokoflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sokoflow_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-sokoflow}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sokoflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sokoflow_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # FastAPI Webhook Gateway
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sokoflow_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - SENDER_BACKEND=mock
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app # live reload in development
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Celery FSM Worker
+  fsm_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sokoflow_fsm_worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - SENDER_BACKEND=mock
+    volumes:
+      - .:/app
+    command: celery -A app.tasks worker -Q conversation_tasks -c 4 --loglevel=info
+
+  # Celery Report Worker
+  report_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sokoflow_report_worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /tmp:/tmp # PDF staging area
+    command: celery -A app.tasks worker -Q report_tasks -c 2 --loglevel=info
+
+  # Celery Beat (Scheduler)
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sokoflow_beat
+    restart: unless-stopped
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    command: celery -A app.tasks beat --loglevel=info
+
+  # Chat Simulator Dev
+  simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sokoflow_simulator
+    profiles:
+      - dev
+    depends_on:
+      - api
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    ports:
+      - "3000:3000"
+    command: python tools/chat_simulator.py --server
+
+volumes:
+  pg_data:
+  redis_data:

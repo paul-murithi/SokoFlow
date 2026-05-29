@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: sokoflow
+          POSTGRES_PASSWORD: sokoflow_test
+          POSTGRES_DB: sokoflow_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgresql+asyncpg://sokoflow:sokoflow_test@localhost:5432/sokoflow_test
+      REDIS_URL: redis://localhost:6379/0
+      CELERY_BROKER_URL: redis://localhost:6379/1
+      CELERY_RESULT_BACKEND: redis://localhost:6379/2
+      SENDER_BACKEND: mock
+      SECRET_KEY: ci-test-secret-key
+      SESSION_TTL_SECONDS: 1800
+      DEDUP_TTL_SECONDS: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Black (formatting)
+        run: black --check .
+
+      - name: Run Flake8 (linting)
+        run: flake8 .
+
+      - name: Run MyPy (type checking)
+        run: mypy app --ignore-missing-imports
+
+      - name: Run tests with coverage
+        run: pytest --cov=app --cov-report=xml --cov-fail-under=85
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
