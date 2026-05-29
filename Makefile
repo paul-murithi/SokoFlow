@@ -1,55 +1,63 @@
-# SokoFlow Developer Makefile 
+# ── SokoFlow Developer Makefile ──────────────────────────────────
 # Usage: make <target>
+# Run `make help` to see all available commands.
 
-.PHONY: help up down logs shell test lint format typecheck migrate \
-        simulate chaos clean
+.PHONY: help infra infra-down up-full down logs shell \
+        test lint format typecheck \
+        migrate migration simulate chaos clean
 
-# Default
+# ── Default ──────────────────────────────────────────────────────
 help:
-	@echo ""
-	@echo "SokoFlow — Available Commands"
-	@echo "─────────────────────────────────────────────────────"
-	@echo "  make up          Start all services (detached)"
-	@echo "  make dev         Start all services + simulator"
-	@echo "  make down        Stop all services"
-	@echo "  make logs        Tail logs for all services"
-	@echo "  make shell       Open a shell inside the api container"
-	@echo ""
-	@echo "  make test        Run the full test suite with coverage"
-	@echo "  make lint        Run flake8 linter"
-	@echo "  make format      Run black formatter"
-	@echo "  make typecheck   Run mypy type checker"
-	@echo ""
-	@echo "  make migrate     Run pending Alembic migrations"
-	@echo "  make migration m='message'   Create new migration"
-	@echo ""
-	@echo "  make simulate p=254712345678 msg='hello'  Send a test message"
-	@echo "  make chaos       Run the chaos test suite"
-	@echo ""
-	@echo "  make clean       Remove containers, volumes, cache"
-	@echo "─────────────────────────────────────────────────────"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc ""
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "SokoFlow — Available Commands"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "─────────────────────────────────────────────────────────"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "DAILY DEVELOPMENT:"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  make infra              Start Postgres + Redis only"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  make infra-down         Stop infra containers"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  Then in separate terminals:"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "    uvicorn app.main:app --reload"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "    celery -A app.tasks worker -Q conversation_tasks --loglevel=debug"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "    celery -A app.tasks worker -Q report_tasks --loglevel=debug"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc ""
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "FULL STACK IN DOCKER (production simulation):"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  make up-full            Build and start everything in Docker"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  make down               Stop all Docker services"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  make logs               Tail all container logs"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  make shell              Open shell inside api container"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc ""
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "CODE QUALITY:"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  make test               Run pytest (requires infra running)"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  make lint               Run flake8"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  make format             Run black"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  make typecheck          Run mypy"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc ""
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "DATABASE:"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  make migrate            Apply pending Alembic migrations"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "  make migration m='msg'  Generate new migration"
+	@.venv/lib/python3.12/site-packages/PIL/__pycache__/ImageChops.cpython-312.pyc "─────────────────────────────────────────────────────────"
 
-# Docker
-up:
-	docker compose up -d
+# ── Infrastructure only ───────────────────────────────────────────
+infra:
+	docker compose up postgres redis -d
 
-dev:
-	docker compose --profile dev up -d
+infra-down:
+	docker compose stop postgres redis
+
+# ── Full stack in Docker ──────────────────────────────────────────
+up-full:
+	docker compose --profile full up -d
 
 down:
-	docker compose down
+	docker compose --profile full down
 
 logs:
-	docker compose logs -f
+	docker compose --profile full logs -f
 
 shell:
 	docker compose exec api bash
 
-# Testing
+# ── Testing & quality (run locally against infra) ─────────────────
 test:
-	docker compose exec api pytest
-
-test-local:
 	pytest
 
 lint:
@@ -61,26 +69,24 @@ format:
 typecheck:
 	mypy app --ignore-missing-imports
 
-# Database
+# ── Database ──────────────────────────────────────────────────────
 migrate:
-	docker compose exec api alembic upgrade head
+	alembic upgrade head
 
 migration:
-	docker compose exec api alembic revision --autogenerate -m "$(m)"
+	alembic revision --autogenerate -m "$(m)"
 
-# Simulator
+# ── Simulator & chaos ─────────────────────────────────────────────
 simulate:
 	python tools/chat_simulator.py --phone $(p) --message "$(msg)"
 
-# Chaos
 chaos:
 	python tools/chaos_runner.py
 
-# Clean
+# ── Clean ─────────────────────────────────────────────────────────
 clean:
-	docker compose down -v --remove-orphans
+	docker compose --profile full down -v --remove-orphans
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
-	find . -type d -name "htmlcov" -exec rm -rf {} +
 	rm -f .coverage coverage.xml

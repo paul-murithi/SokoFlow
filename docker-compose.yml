@@ -1,6 +1,7 @@
 version: "3.9"
 
 services:
+  # ── Infrastructure (starts with every profile, including default) ──
   postgres:
     image: postgres:15-alpine
     container_name: sokoflow_postgres
@@ -34,8 +35,10 @@ services:
       timeout: 3s
       retries: 5
 
-  # FastAPI Webhook Gateway
+  # ── Application services (profile: full) ─────────────────────────
+  # Only start when explicitly requested: docker compose --profile full up
   api:
+    profiles: [full]
     build:
       context: .
       dockerfile: Dockerfile
@@ -47,17 +50,15 @@ services:
       redis:
         condition: service_healthy
     env_file:
-      - .env
-    environment:
-      - SENDER_BACKEND=mock
+      - .env.docker
     ports:
       - "8000:8000"
     volumes:
-      - .:/app # live reload in development
+      - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  # Celery FSM Worker
   fsm_worker:
+    profiles: [full]
     build:
       context: .
       dockerfile: Dockerfile
@@ -69,15 +70,13 @@ services:
       redis:
         condition: service_healthy
     env_file:
-      - .env
-    environment:
-      - SENDER_BACKEND=mock
+      - .env.docker
     volumes:
       - .:/app
     command: celery -A app.tasks worker -Q conversation_tasks -c 4 --loglevel=info
 
-  # Celery Report Worker
   report_worker:
+    profiles: [full]
     build:
       context: .
       dockerfile: Dockerfile
@@ -89,14 +88,14 @@ services:
       redis:
         condition: service_healthy
     env_file:
-      - .env
+      - .env.docker
     volumes:
       - .:/app
-      - /tmp:/tmp # PDF staging area
+      - /tmp:/tmp
     command: celery -A app.tasks worker -Q report_tasks -c 2 --loglevel=info
 
-  # Celery Beat (Scheduler)
   beat:
+    profiles: [full]
     build:
       context: .
       dockerfile: Dockerfile
@@ -105,23 +104,21 @@ services:
     depends_on:
       - redis
     env_file:
-      - .env
+      - .env.docker
     volumes:
       - .:/app
     command: celery -A app.tasks beat --loglevel=info
 
-  # Chat Simulator Dev
   simulator:
+    profiles: [dev]
     build:
       context: .
       dockerfile: Dockerfile
     container_name: sokoflow_simulator
-    profiles:
-      - dev
     depends_on:
       - api
     env_file:
-      - .env
+      - .env.docker
     volumes:
       - .:/app
     ports:
