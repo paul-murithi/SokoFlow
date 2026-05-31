@@ -7,7 +7,7 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
       - id: check-merge-conflict
-      - id: debug-statements        # catches accidental print/pdb left in
+      - id: debug-statements # catches accidental print/pdb left in
 
   - repo: https://github.com/psf/black
     rev: 24.4.2
@@ -24,6 +24,7 @@ repos:
     rev: v1.10.0
     hooks:
       - id: mypy
-        additional_dependencies: [pydantic, sqlalchemy]
+        additional_dependencies:
+          [pydantic, sqlalchemy, types-redis, pydantic-settings, fastapi]
         args: [--ignore-missing-imports]
         exclude: ^(tests/|app/db/migrations/)

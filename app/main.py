@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from app.api.routes import api_router
 
 app = FastAPI(
     title="SokoFlow",
@@ -7,7 +8,4 @@ app = FastAPI(
 )
 
 
-@app.get("/health")
-async def health() -> dict:
-    # TODO (Week 1): expand to check DB + Redis connectivity
-    return {"status": "ok", "service": "sokoflow-api"}
+app.include_router(api_router)
