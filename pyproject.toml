@@ -20,7 +20,7 @@ indent-style = "space"
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
-exclude = ["app/db/migrations/"]
+exclude = ["alembic/"]
 plugins = [
   "pydantic.mypy"
 ]
