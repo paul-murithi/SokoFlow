@@ -1,5 +1,3 @@
----
-
 # ADR 004: Sales Data Modeling – Single Row vs Header–Detail
 
 **Date:** 2026-06-03
