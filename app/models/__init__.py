@@ -1,4 +1,4 @@
-from .user import User
 from .conversation_events import ConversationEvents
+from .shop import Shop
 
-__all__ = ["User", "ConversationEvents"]
+__all__ = ["Shop", "ConversationEvents"]

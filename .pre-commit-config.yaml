@@ -9,17 +9,13 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements # catches accidental print/pdb left in
 
-  - repo: https://github.com/psf/black
-    rev: 24.4.2
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.0
     hooks:
-      - id: black
-        language_version: python3.12
+      - id: ruff-check
+        args: [--fix]
 
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.0.0
-    hooks:
-      - id: flake8
-        exclude: ^alembic/
+      - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.10.0

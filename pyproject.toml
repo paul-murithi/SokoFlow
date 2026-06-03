@@ -15,6 +15,13 @@ extend-exclude = [
 quote-style = "double"
 indent-style = "space"
 
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+]
+
 
 [tool.mypy]
 python_version = "3.12"

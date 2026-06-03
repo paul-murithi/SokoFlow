@@ -1,12 +1,13 @@
 from datetime import datetime
 from enum import Enum
-from uuid import UUID
 from typing import Any
+from uuid import UUID
 
-from sqlalchemy import String, TIMESTAMP, func, text
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID, JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import TIMESTAMP, String, func, text
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 

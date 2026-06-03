@@ -1,7 +1,8 @@
+from typing import Any
+
+import redis.asyncio as ioredis
 from fastapi import APIRouter
 from sqlalchemy import text
-import redis.asyncio as ioredis
-from typing import Any
 
 from app.core.config import settings
 
