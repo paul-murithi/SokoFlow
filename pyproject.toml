@@ -8,7 +8,7 @@ extend-exclude = [
     ".venv",
     "build",
     "dist",
-    "app/db/migrations",
+    "alembic/",
 ]
 
 [tool.ruff.format]
