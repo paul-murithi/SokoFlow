@@ -27,8 +27,8 @@ help:
 	@echo ""
 	@echo "CODE QUALITY:"
 	@echo "  make test               Run pytest (requires infra running)"
-	@echo "  make lint               Run flake8"
-	@echo "  make format             Run black"
+	@echo "  make lint               Run ruff check"
+	@echo "  make format             Run ruff format"
 	@echo "  make typecheck          Run mypy"
 	@echo ""
 	@echo "DATABASE:"
@@ -61,10 +61,10 @@ test:
 	pytest
 
 lint:
-	flake8 app tests
+	ruff check .
 
 format:
-	black app tests tools
+	ruff format .
 
 typecheck:
 	mypy app --ignore-missing-imports
