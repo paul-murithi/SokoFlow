@@ -1,21 +1,73 @@
-import fakeredis
+import asyncio
+from collections.abc import AsyncGenerator
+
 import pytest
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.pool import NullPool
+
+from app.core.config import settings
+from app.core.database import Base, get_db
+from app.main import app
+from app.models import *  # noqa: F403, F401
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create an instance of the default event loop for each test case."""
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture(scope="session")
+async def engine():
+    """Create a session-scoped engine with NullPool."""
+    engine = create_async_engine(
+        settings.test_db_url,
+        poolclass=NullPool,
+    )
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    yield engine
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+    await engine.dispose()
 
 
 @pytest.fixture
-def fake_redis():
-    """In-memory Redis for unit tests. No running Redis required."""
-    return fakeredis.FakeRedis(decode_responses=True)
+async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
+    """Provide a function-scoped database session."""
+    session_factory = async_sessionmaker(
+        bind=engine,
+        expire_on_commit=False,
+        autoflush=False,
+    )
+
+    async with session_factory() as session:
+        yield session
 
 
-# TODO: async DB session fixture
-# @pytest.fixture
-# async def db_session():
-#     ...
+@pytest.fixture
+async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+    """Provide an AsyncClient for testing FastAPI endpoints."""
 
-# TODO: FastAPI TestClient fixture
-# @pytest.fixture
-# def client():
-#     from fastapi.testclient import TestClient
-#     from app.main import app
-#     return TestClient(app)
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        yield ac
+
+    app.dependency_overrides.clear()

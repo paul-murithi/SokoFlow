@@ -1,16 +1,18 @@
 from typing import Any
 
 import redis.asyncio as ioredis
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.database import get_db
 
 router = APIRouter()
 
 
 @router.get("")
-async def health() -> dict[str, Any]:
+async def health(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     response: dict[str, Any] = {
         "status": "ok",
         "services": {
@@ -22,12 +24,7 @@ async def health() -> dict[str, Any]:
 
     # Postgres
     try:
-        from sqlalchemy.ext.asyncio import create_async_engine
-
-        engine = create_async_engine(settings.database_url)
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-        await engine.dispose()
+        await db.execute(text("SELECT 1"))
         response["services"]["postgres"] = "ok"
     except Exception as e:
         response["services"]["postgres"] = f"error: {e}"

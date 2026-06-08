@@ -2,11 +2,15 @@ from uuid import UUID
 
 from fastapi import APIRouter
 
+from app.schemas.product import ProductCreate, ProductResponse
+from app.services.product_service import ProductService
+
 router = APIRouter()
+service = ProductService()
 
 
-@router.post("")
-def create_product() -> None: ...
+@router.post("", status_code=201, response_model=ProductResponse)
+def create_product(product: ProductCreate) -> None: ...
 
 
 @router.get("")

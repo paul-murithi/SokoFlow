@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # Database
     database_url: str
     postgres_port: str
+    test_db_url: str
 
     # Redis
     redis_url: str
