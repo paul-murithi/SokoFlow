@@ -17,12 +17,8 @@ from app.models import *  # noqa: F403, F401
 
 
 @pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for each test case."""
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-    yield loop
-    loop.close()
+def event_loop_policy():
+    return asyncio.DefaultEventLoopPolicy()
 
 
 @pytest.fixture(scope="session")
