@@ -1,8 +1,8 @@
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.factories import ProductFactory
 from app.models.product import Product
+from tests.factories import ProductFactory
 
 
 async def test_create_product(

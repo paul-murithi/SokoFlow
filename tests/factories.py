@@ -8,8 +8,7 @@ class ProductFactory(factory.Factory):
         model = Product
 
     name = factory.Faker("word")
-    price = factory.Faker("pydecimal", left_digits=4,
-                          right_digits=2, positive=True)
+    price = factory.Faker("pydecimal", left_digits=4, right_digits=2, positive=True)
 
     @classmethod
     def as_dict(cls, **kwargs):
