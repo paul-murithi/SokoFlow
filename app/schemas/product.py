@@ -7,6 +7,7 @@ from pydantic import BaseModel
 class ProductCreate(BaseModel):
     name: str
     price: Decimal
+    shop_id: UUID
 
 
 class ProductUpdate(BaseModel):

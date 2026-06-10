@@ -1,6 +1,6 @@
 import factory
 
-from app.models import Product
+from app.models import Product, Shop
 
 
 class ProductFactory(factory.Factory):
@@ -14,3 +14,16 @@ class ProductFactory(factory.Factory):
     def as_dict(cls, **kwargs):
         obj = cls.build(**kwargs)
         return {"name": obj.name, "price": str(obj.price)}
+
+
+class ShopFactory(factory.Factory):
+    class Meta:
+        model = Shop
+
+    phone = factory.Faker("bothify", text="+1-###-###-####")
+    name = factory.Faker("company")
+
+    @classmethod
+    def as_dict(cls, **kwargs):
+        obj = cls.build(**kwargs)
+        return {"name": obj.name, "phone": obj.phone}
