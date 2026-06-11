@@ -30,11 +30,9 @@ async def test_create_product(
 
 
 async def test_create_product_invalid_price(client: AsyncClient, db_session: AsyncSession):
-    shop_payload = ShopFactory.as_dict()
-    shop_response = await client.post("/shops", json=shop_payload)
-    shop_id = shop_response.json()["id"]
+    shop_id = uuid4()
 
-    payload = {**ProductFactory.as_dict(price=-222), "shop_id": shop_id}
+    payload = {**ProductFactory.as_dict(price=-222), "shop_id": str(shop_id)}
     response = await client.post("/products", json=payload)
 
     assert response.status_code == 422
