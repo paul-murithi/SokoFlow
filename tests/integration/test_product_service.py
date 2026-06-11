@@ -1,5 +1,5 @@
 from decimal import Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,3 +38,12 @@ async def test_create_product_invalid_price(client: AsyncClient, db_session: Asy
     response = await client.post("/products", json=payload)
 
     assert response.status_code == 422
+
+
+async def test_get_product_not_found(client: AsyncClient):
+    random_uuid = uuid4()
+    response = await client.get(f"/products/{random_uuid}")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == f"Product with ID {
+        random_uuid} not found"

@@ -22,8 +22,10 @@ async def create_product(
 def get_products() -> None: ...
 
 
-@router.get("/{id}")
-def get_product(id: UUID) -> None: ...
+@router.get("/{product_id}", response_model=ProductResponse)
+async def get_product(product_id: UUID, db: AsyncSession = Depends(get_db)) -> ProductResponse:
+    product = await service.get_product(product_id, db)
+    return ProductResponse.model_validate(product)
 
 
 @router.patch("/{id}")
