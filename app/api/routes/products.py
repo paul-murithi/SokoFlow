@@ -15,7 +15,8 @@ service = ProductService()
 async def create_product(
     payload: ProductCreate, db: AsyncSession = Depends(get_db)
 ) -> ProductResponse:
-    return await service.create_product(payload, db)
+    product = await service.create_product(payload, db)
+    return ProductResponse.model_validate(product)
 
 
 @router.get("")
@@ -23,7 +24,9 @@ def get_products() -> None: ...
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
-async def get_product(product_id: UUID, db: AsyncSession = Depends(get_db)) -> ProductResponse:
+async def get_product(
+    product_id: UUID, db: AsyncSession = Depends(get_db)
+) -> ProductResponse:
     product = await service.get_product(product_id, db)
     return ProductResponse.model_validate(product)
 

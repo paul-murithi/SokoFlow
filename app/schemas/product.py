@@ -1,10 +1,14 @@
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
-class ProductCreate(BaseModel):
+class ORMBaseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProductCreate(ORMBaseSchema):
     name: str
     price: Decimal
     shop_id: UUID
@@ -22,7 +26,7 @@ class ProductUpdate(BaseModel):
     price: Decimal | None = None
 
 
-class ProductResponse(BaseModel):
+class ProductResponse(ORMBaseSchema):
     id: UUID
     name: str
     price: Decimal

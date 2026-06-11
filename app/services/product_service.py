@@ -1,33 +1,30 @@
 import random
 import string
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from uuid import UUID
-from fastapi import HTTPException
 
 from app.models.product import Product
-from app.schemas.product import ProductCreate, ProductResponse
+from app.schemas.product import ProductCreate
 from app.utils.errors import ResourceNotFound
 
 
 class ProductService:
     def generate_sku(self, product_name: str, length: int = 6) -> str:
-        prefix = "".join(word[0].upper()
-                         for word in product_name.split() if word)
+        prefix = "".join(word[0].upper() for word in product_name.split() if word)
         suffix = "".join(
             random.choices(string.ascii_uppercase + string.digits, k=length)
         )
         return f"{prefix}-{suffix}"
 
-    async def create_product(
-        self, data: ProductCreate, db: AsyncSession
-    ) -> ProductResponse:
+    async def create_product(self, data: ProductCreate, db: AsyncSession) -> Product:
         product = Product(
             name=data.name,
             price=data.price,
             sku=self.generate_sku(data.name),
             shop_id=data.shop_id,
         )
+        # TODO: Add error handling
 
         db.add(product)
         await db.commit()

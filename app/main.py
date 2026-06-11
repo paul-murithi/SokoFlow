@@ -15,7 +15,9 @@ app.include_router(api_router)
 
 
 @app.exception_handler(ResourceNotFound)
-async def resource_not_found_handler(request: Request, exc: ResourceNotFound):
+async def resource_not_found_handler(
+    request: Request, exc: ResourceNotFound
+) -> JSONResponse:
     return JSONResponse(
         status_code=404,
         content={"detail": f"{exc.name} with ID {exc.id} not found"},
