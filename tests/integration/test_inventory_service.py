@@ -2,7 +2,10 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.product import Product
+from app.services.inventory_service import InventoryService
 from tests.factories import ProductFactory, ShopFactory
+
+inventory_service = InventoryService()
 
 
 async def test_create_inventory(client: AsyncClient, db_session: AsyncSession):
@@ -15,8 +18,17 @@ async def test_create_inventory(client: AsyncClient, db_session: AsyncSession):
     db_session.add(product)
     await db_session.flush()
 
-    assert shop.id is not None
     assert product.id is not None
-    # TODO: Add the product to the inventory table.
-    # Get the product_id back
-    # Test add stock
+
+    quantity_to_add = 10
+    old_quantity = 0
+
+    updated_inventory = await inventory_service.add_stock(
+        product_id=product.id, quantity=quantity_to_add, db=db_session
+    )
+
+    assert updated_inventory.quantity == old_quantity + quantity_to_add
+    assert product.id == updated_inventory.product_id
+
+    await db_session.refresh(updated_inventory)
+    assert updated_inventory.quantity == 10
