@@ -1,19 +1,22 @@
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.product import Product
 from tests.factories import ProductFactory, ShopFactory
 
 
 async def test_create_inventory(client: AsyncClient, db_session: AsyncSession):
-    shop_payload = ShopFactory.as_dict()
-    shop_response = await client.post("/shops", json=shop_payload)
-    shop_id = shop_response.json()["id"]
+    shop = ShopFactory.build()
+    db_session.add(shop)
+    await db_session.flush()
 
-    product_payload = {**ProductFactory.as_dict(), "shop_id": shop_id}
-    product_response = await client.post("/products", json=product_payload)
-    product_id = product_response.json()["id"]
+    product_factory = ProductFactory.as_dict()
+    product = Product(**product_factory, sku="PR-TEST", shop_id=shop.id)
+    db_session.add(product)
+    await db_session.flush()
 
-    assert shop_id and product_id is not None
+    assert shop.id is not None
+    assert product.id is not None
     # TODO: Add the product to the inventory table.
     # Get the product_id back
     # Test add stock
