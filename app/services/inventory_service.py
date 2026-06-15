@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.inventory import Inventory
@@ -9,14 +10,20 @@ class InventoryService:
     async def add_stock(
         self, product_id: UUID, quantity: int, db: AsyncSession
     ) -> Inventory:
-        # TODO: Check if the product exist. If exists, update. If not, add.
-        inventory = Inventory(product_id=product_id, quantity=quantity)
+        inventory = await db.scalar(
+            select(Inventory).where(Inventory.product_id == product_id)
+        )
 
-        # TODO: Add error handling
-        db.add(inventory)
+        if inventory:
+            inventory.quantity += quantity
+        else:
+            inventory = Inventory(product_id=product_id, quantity=quantity)
+            db.add(inventory)
+
         await db.commit()
         await db.refresh(inventory)
 
+        # TODO: Add error handling
         return inventory
 
     def remove_stock(self) -> None:
