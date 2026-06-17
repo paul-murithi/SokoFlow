@@ -10,9 +10,11 @@ class InventoryService:
     async def add_stock(
         self, product_id: UUID, quantity: int, db: AsyncSession
     ) -> Inventory:
-        inventory = await db.scalar(
+        # TODO: Concurrency and race condition possibility
+        result = await db.execute(
             select(Inventory).where(Inventory.product_id == product_id)
         )
+        inventory = result.scalar_one_or_none()
 
         if inventory:
             inventory.quantity += quantity
