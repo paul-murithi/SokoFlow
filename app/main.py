@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.api.routes import api_router
-from app.utils.errors import ResourceNotFound
+from app.utils.errors import InsufficientStockError, ResourceNotFound
 
 app = FastAPI(
     title="SokoFlow",
@@ -21,4 +21,13 @@ async def resource_not_found_handler(
     return JSONResponse(
         status_code=404,
         content={"detail": f"{exc.name} with ID {exc.id} not found"},
+    )
+
+
+@app.exception_handler(InsufficientStockError)
+async def insufficient_stock_exception_handler(
+    request: Request, exc: InsufficientStockError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=404, content={"Stock deduction failed. Insufficient stock"}
     )
