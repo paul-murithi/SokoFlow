@@ -9,12 +9,6 @@ class ResourceNotFoundException(Exception):
         super().__init__(self.message)
 
 
-class InsufficientStockError(Exception):
-    def __init__(self, name: str, internal_code: int):
-        self.name = name
-        self.internal_code = internal_code
-
-
 class ResourceAlreadyExistsException(Exception):
     def __init__(self, entity_name: str, field_name: str, value: Any):
         self.entity_name = entity_name

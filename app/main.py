@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes import api_router
 from app.utils.errors import (
-    InsufficientStockError,
+    InsufficientStockException,
     ResourceAlreadyExistsException,
     ResourceNotFoundException,
 )
@@ -33,12 +33,17 @@ async def resource_not_found_handler(
     )
 
 
-@app.exception_handler(InsufficientStockError)
+@app.exception_handler(InsufficientStockException)
 async def insufficient_stock_exception_handler(
-    request: Request, exc: InsufficientStockError
+    request: Request, exc: InsufficientStockException
 ) -> JSONResponse:
     return JSONResponse(
-        status_code=404, content={"Stock deduction failed. Insufficient stock"}
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "success": False,
+            "error_type": "INSUFFICIENT_STOCK",
+            "message": exc.message,
+        },
     )
 
 
