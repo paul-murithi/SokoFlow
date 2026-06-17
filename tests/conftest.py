@@ -14,6 +14,8 @@ from app.core.config import settings
 from app.core.database import Base, get_db
 from app.main import app
 from app.models import *  # noqa: F403, F401
+from app.models.product import Product
+from tests.factories import ProductFactory, ShopFactory
 
 
 @pytest.fixture(scope="session")
@@ -67,3 +69,21 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def shop_and_product(db_session: AsyncSession):
+    shop = ShopFactory.build()
+    db_session.add(shop)
+    await db_session.flush()
+
+    product_factory = ProductFactory.as_dict()
+    product = Product(
+        **product_factory,
+        shop_id=shop.id,
+        sku="PR-TEST",
+    )
+    db_session.add(product)
+    await db_session.flush()
+
+    return shop, product
