@@ -72,18 +72,20 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest.fixture
-async def shop_and_product(db_session: AsyncSession):
+async def shop(db_session):
     shop = ShopFactory.build()
     db_session.add(shop)
     await db_session.flush()
+    return shop
 
-    product_factory = ProductFactory.as_dict()
+
+@pytest.fixture
+async def product(db_session, shop):
     product = Product(
-        **product_factory,
+        **ProductFactory.as_dict(),
         shop_id=shop.id,
         sku="PR-TEST",
     )
     db_session.add(product)
     await db_session.flush()
-
-    return shop, product
+    return product
