@@ -2,13 +2,12 @@ import random
 import string
 from uuid import UUID
 
-from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.product import Product
 from app.schemas.product import ProductCreate
-from app.utils.errors import ResourceNotFound
+from app.utils.errors import ResourceAlreadyExistsException, ResourceNotFoundException
 
 
 class ProductService:
@@ -35,9 +34,8 @@ class ProductService:
         # TODO: Add more error handlers
         except IntegrityError:
             await db.rollback()
-            raise HTTPException(
-                status_code=409,
-                detail="Duplicate. A product with this SKU already exists.",
+            raise ResourceAlreadyExistsException(
+                entity_name="Product", field_name="SKU", value=product.sku
             )
 
         return product
@@ -46,7 +44,9 @@ class ProductService:
         product = await db.get(Product, product_id)
 
         if not product:
-            raise ResourceNotFound(name="Product", id=str(product_id))
+            raise ResourceNotFoundException(
+                entity_name="Product", identifier=product_id
+            )
 
         return product
 

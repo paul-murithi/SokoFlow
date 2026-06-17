@@ -1,8 +1,12 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from app.api.routes import api_router
-from app.utils.errors import InsufficientStockError, ResourceNotFound
+from app.utils.errors import (
+    InsufficientStockError,
+    ResourceAlreadyExistsException,
+    ResourceNotFoundException,
+)
 
 app = FastAPI(
     title="SokoFlow",
@@ -14,13 +18,18 @@ app = FastAPI(
 app.include_router(api_router)
 
 
-@app.exception_handler(ResourceNotFound)
+@app.exception_handler(ResourceNotFoundException)
 async def resource_not_found_handler(
-    request: Request, exc: ResourceNotFound
+    request: Request, exc: ResourceNotFoundException
 ) -> JSONResponse:
     return JSONResponse(
-        status_code=404,
-        content={"detail": f"{exc.name} with ID {exc.id} not found"},
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={
+            "success": False,
+            "error_type": "RESOURCE_NOT_FOUND",
+            "message": exc.message,
+            "meta": {"entity": exc.entity_name, "id": str(exc.identifier)},
+        },
     )
 
 
@@ -30,4 +39,23 @@ async def insufficient_stock_exception_handler(
 ) -> JSONResponse:
     return JSONResponse(
         status_code=404, content={"Stock deduction failed. Insufficient stock"}
+    )
+
+
+@app.exception_handler(ResourceAlreadyExistsException)
+async def resource_already_exists_handler(
+    request: Request, exc: ResourceAlreadyExistsException
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={
+            "success": False,
+            "error_type": "DUPLICATE_RESOURCE",
+            "message": exc.message,
+            "meta": {
+                "entity": exc.entity_name,
+                "conflict_field": exc.field_name,
+                "conflict_value": str(exc.value),
+            },
+        },
     )
