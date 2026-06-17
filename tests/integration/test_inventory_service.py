@@ -1,3 +1,4 @@
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -5,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.inventory import Inventory
 from app.models.product import Product
 from app.services.inventory_service import InventoryService
+from app.utils.errors import InsufficientStockException
 from tests.factories import ProductFactory, ShopFactory
 
 inventory_service = InventoryService()
@@ -57,7 +59,20 @@ async def test_deduct_stock(client: AsyncClient, db_session: AsyncSession, produ
     assert persisted_inventory.quantity == old_quantity - quantity_to_deduct
 
 
-def test_deduct_insufficient_stock(client: AsyncClient, db_session: AsyncSession): ...
+async def test_deduct_insufficient_stock(
+    client: AsyncClient, db_session: AsyncSession, product
+):
+    inventory = Inventory(product_id=product.id)
+    db_session.add(inventory)
+    await db_session.flush()
+
+    # TODO: Validate for quantity > 0 at the API layer
+    quantity_to_deduct = 6
+
+    with pytest.raises(InsufficientStockException):
+        await inventory_service.deduct_stock(
+            product.id, quantity_to_deduct, db=db_session
+        )
 
 
 def test_deduct_stock_alert_threshold(
