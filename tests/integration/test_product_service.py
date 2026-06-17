@@ -3,11 +3,13 @@ from unittest.mock import patch
 from uuid import UUID, uuid4
 
 import pytest
+from fastapi import status
 from httpx import AsyncClient
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.product import Product
+from app.utils.errors import ResourceAlreadyExistsException, ResourceNotFoundException
 from tests.factories import ProductFactory, ShopFactory
 
 
@@ -17,13 +19,13 @@ async def test_create_product(
 ):
     shop_payload = ShopFactory.as_dict()
     shop_response = await client.post("/shops", json=shop_payload)
-    assert shop_response.status_code == 201
+    assert shop_response.status_code == status.HTTP_201_CREATED
     shop_id = shop_response.json()["id"]
 
     payload = {**ProductFactory.as_dict(), "shop_id": shop_id}
     response = await client.post("/products", json=payload)
 
-    assert response.status_code == 201
+    assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
     product = await db_session.get(Product, data["id"])
     assert product is not None
@@ -40,15 +42,15 @@ async def test_create_product_invalid_price(
     payload = {**ProductFactory.as_dict(price=-222), "shop_id": str(shop_id)}
     response = await client.post("/products", json=payload)
 
-    assert response.status_code == 422
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_get_product_not_found(client: AsyncClient):
     random_uuid = uuid4()
     response = await client.get(f"/products/{random_uuid}")
 
-    assert response.status_code == 404
-    assert response.json()["detail"] == f"Product with ID {random_uuid} not found"
+    assert pytest.raises(ResourceNotFoundException)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 async def test_duplicate_sku_constraint_enforced_at_db_level(
@@ -84,9 +86,9 @@ async def test_create_product_with_duplicate_sku_returns_409(client: AsyncClient
         return_value=fixed_sku,
     ):
         first = await client.post("/products", json=product_payload)
-        assert first.status_code == 201
+        assert first.status_code == status.HTTP_201_CREATED
         assert first.json()["sku"] == fixed_sku
 
         second = await client.post("/products", json=product_payload)
-        assert second.status_code == 409
-        assert "duplicate" in second.json()["detail"].lower()
+        assert second.status_code == status.HTTP_409_CONFLICT
+        assert pytest.raises(ResourceAlreadyExistsException)
