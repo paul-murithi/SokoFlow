@@ -5,7 +5,6 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
-    async_sessionmaker,
     create_async_engine,
 )
 from sqlalchemy.pool import NullPool
@@ -42,9 +41,9 @@ async def engine():
     await engine.dispose()
 
 
+"""
 @pytest.fixture
 async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
-    """Provide a function-scoped database session."""
     session_factory = async_sessionmaker(
         bind=engine,
         expire_on_commit=False,
@@ -53,6 +52,26 @@ async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
 
     async with session_factory() as session:
         yield session
+"""
+
+
+@pytest.fixture
+async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
+    """Provide a function-scoped database session"""
+    async with engine.connect() as conn:
+        transaction = await conn.begin()
+
+        session = AsyncSession(
+            bind=conn,
+            expire_on_commit=False,
+            autoflush=False,
+        )
+
+        try:
+            yield session
+        finally:
+            await session.close()
+            await transaction.rollback()
 
 
 @pytest.fixture
