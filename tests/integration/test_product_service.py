@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.product import Product
-from app.utils.errors import ResourceAlreadyExistsException, ResourceNotFoundException
+from app.utils.errors import ResourceAlreadyExistsException
 from tests.factories import ProductFactory, ShopFactory
 
 
@@ -48,8 +48,6 @@ async def test_create_product_invalid_price(
 async def test_get_product_not_found(client: AsyncClient):
     random_uuid = uuid4()
     response = await client.get(f"/products/{random_uuid}")
-
-    assert pytest.raises(ResourceNotFoundException)
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
