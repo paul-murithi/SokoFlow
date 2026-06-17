@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.inventory import Inventory
+from app.utils.errors import ResourceNotFoundException
 
 
 class InventoryService:
@@ -28,8 +29,26 @@ class InventoryService:
         # TODO: Add error handling
         return inventory
 
-    def remove_stock(self) -> None:
-        pass
+    async def deduct_stock(
+        self, product_id: UUID, quantity: int, db: AsyncSession
+    ) -> Inventory:
+        result = await db.execute(
+            select(Inventory).where(Inventory.product_id == product_id)
+        )
+        inventory = result.scalar_one_or_none()
+
+        if not inventory:
+            raise ResourceNotFoundException(
+                entity_name="Inventory Product", identifier=product_id
+            )
+        # TODO:  Handle low stock threshold
+        inventory.quantity -= quantity
+
+        db.add(inventory)
+        await db.commit()
+        await db.refresh(inventory)
+
+        return inventory
 
     def get_stock(self) -> None:
         pass

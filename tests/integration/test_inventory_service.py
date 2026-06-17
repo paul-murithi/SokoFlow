@@ -1,6 +1,8 @@
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.inventory import Inventory
 from app.models.product import Product
 from app.services.inventory_service import InventoryService
 from tests.factories import ProductFactory, ShopFactory
@@ -32,3 +34,32 @@ async def test_create_inventory(client: AsyncClient, db_session: AsyncSession):
 
     await db_session.refresh(updated_inventory)
     assert updated_inventory.quantity == 10
+
+
+async def test_deduct_stock(client: AsyncClient, db_session: AsyncSession, product):
+    old_quantity = 10
+    quantity_to_deduct = 3
+
+    inventory = Inventory(product_id=product.id, quantity=old_quantity)
+    db_session.add(inventory)
+    await db_session.flush()
+
+    await inventory_service.deduct_stock(
+        product.id, quantity=quantity_to_deduct, db=db_session
+    )
+
+    result = await db_session.execute(
+        select(Inventory).where(Inventory.product_id == product.id)
+    )
+    persisted_inventory = result.scalar_one()
+
+    assert persisted_inventory.product_id == product.id
+    assert persisted_inventory.quantity == old_quantity - quantity_to_deduct
+
+
+def test_deduct_insufficient_stock(client: AsyncClient, db_session: AsyncSession): ...
+
+
+def test_deduct_stock_alert_threshold(
+    client: AsyncClient, db_session: AsyncSession
+): ...
