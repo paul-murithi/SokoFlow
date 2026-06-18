@@ -63,7 +63,7 @@ async def test_deduct_insufficient_stock(
     client: AsyncClient, db_session: AsyncSession, product, inventory
 ):
     # TODO: Validate for quantity > 0 at the API layer
-    quantity_to_deduct = 6
+    quantity_to_deduct = 16
 
     with pytest.raises(InsufficientStockException):
         await inventory_service.deduct_stock(
@@ -71,6 +71,12 @@ async def test_deduct_insufficient_stock(
         )
 
 
-def test_deduct_stock_alert_threshold(
-    client: AsyncClient, db_session: AsyncSession
-): ...
+async def test_deduct_stock_alert_threshold(
+    client: AsyncClient, db_session: AsyncSession, product, inventory
+):
+    quantity_to_deduct = 6
+    updated_inventory, low_stock_triggered = await inventory_service.deduct_stock(
+        product_id=product.id, quantity=quantity_to_deduct, db=db_session
+    )
+    assert updated_inventory.quantity == 4
+    assert low_stock_triggered is True

@@ -31,7 +31,7 @@ class InventoryService:
 
     async def deduct_stock(
         self, product_id: UUID, quantity: int, db: AsyncSession
-    ) -> Inventory:
+    ) -> tuple[Inventory, bool]:
         result = await db.execute(
             select(Inventory).where(Inventory.product_id == product_id)
         )
@@ -50,6 +50,7 @@ class InventoryService:
                 available=inventory.quantity,
                 requested=quantity,
             )
+        old_is_low = inventory.quantity <= inventory.low_stock_threshold
 
         inventory.quantity -= quantity
 
@@ -57,13 +58,20 @@ class InventoryService:
         await db.commit()
         await db.refresh(inventory)
 
-        return inventory
+        new_is_low = inventory.quantity <= inventory.low_stock_threshold
+
+        low_stock_triggered = self.should_send_low_stock_alert(old_is_low, new_is_low)
+
+        return inventory, low_stock_triggered
 
     def get_stock(self) -> None:
         pass
 
     def is_low_stock(self, quantity_to_deduct: int, current_quantity: int) -> bool:
         return quantity_to_deduct > current_quantity
+
+    def should_send_low_stock_alert(self, old_is_low: bool, new_is_low: bool) -> bool:
+        return (old_is_low, new_is_low) == (False, True)
 
     def update_threshold(self) -> None:
         pass
