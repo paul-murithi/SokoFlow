@@ -60,12 +60,8 @@ async def test_deduct_stock(client: AsyncClient, db_session: AsyncSession, produ
 
 
 async def test_deduct_insufficient_stock(
-    client: AsyncClient, db_session: AsyncSession, product
+    client: AsyncClient, db_session: AsyncSession, product, inventory
 ):
-    inventory = Inventory(product_id=product.id)
-    db_session.add(inventory)
-    await db_session.flush()
-
     # TODO: Validate for quantity > 0 at the API layer
     quantity_to_deduct = 6
 

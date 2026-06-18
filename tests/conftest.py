@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.database import Base, get_db
 from app.main import app
 from app.models import *  # noqa: F403, F401
+from app.models.inventory import Inventory
 from app.models.product import Product
 from tests.factories import ProductFactory, ShopFactory
 
@@ -108,3 +109,12 @@ async def product(db_session, shop):
     db_session.add(product)
     await db_session.flush()
     return product
+
+
+@pytest.fixture
+async def inventory(db_session, product):
+    inventory = Inventory(product_id=product.id)
+    db_session.add(inventory)
+    await db_session.flush()
+
+    return inventory
