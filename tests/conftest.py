@@ -113,7 +113,7 @@ async def product(db_session, shop):
 
 @pytest.fixture
 async def inventory(db_session, product):
-    inventory = Inventory(product_id=product.id)
+    inventory = Inventory(product_id=product.id, quantity=10)
     db_session.add(inventory)
     await db_session.flush()
 
