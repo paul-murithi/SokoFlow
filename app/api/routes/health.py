@@ -32,7 +32,7 @@ async def health(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
 
     # Redis
     try:
-        r = ioredis.from_url(settings.redis_url)
+        r = ioredis.Redis.from_url(settings.redis_url)
         await r.ping()
         await r.close()
         response["services"]["redis"] = "ok"
