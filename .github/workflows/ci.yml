@@ -40,7 +40,7 @@ jobs:
       APP_ENV: test
       CORRELATION_ID_HEADER: X-Correlation-ID
       POSTGRES_PORT: "5432"
-      TEST_DB_URL: ${DATABASE_URL}
+      TEST_DB_URL: postgresql+asyncpg://sokoflow:sokoflow_test@localhost:5432/sokoflow_test
       DATABASE_URL: postgresql+asyncpg://sokoflow:sokoflow_test@localhost:5432/sokoflow_test
       REDIS_URL: redis://localhost:6379/0
       CELERY_BROKER_URL: redis://localhost:6379/1
