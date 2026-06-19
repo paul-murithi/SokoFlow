@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncGenerator
+from decimal import Decimal
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -118,3 +119,34 @@ async def inventory(db_session, product):
     await db_session.flush()
 
     return inventory
+
+
+@pytest.fixture
+def sale_setup(db_session, shop):
+    async def create(
+        *,
+        price=Decimal("100.50"),
+        quantity=10,
+    ):
+        product = Product(
+            **ProductFactory.as_dict(price=price), shop_id=shop.id, sku="PR-TEST"
+        )
+
+        db_session.add(product)
+        await db_session.flush()
+
+        inventory = Inventory(
+            product_id=product.id,
+            quantity=quantity,
+        )
+
+        db_session.add(inventory)
+        await db_session.flush()
+
+        return {
+            "shop": shop,
+            "product": product,
+            "inventory": inventory,
+        }
+
+    return create
