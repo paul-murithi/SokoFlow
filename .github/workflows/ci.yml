@@ -38,14 +38,25 @@ jobs:
 
     env:
       APP_ENV: test
+      CORRELATION_ID_HEADER: X-Correlation-ID
+      POSTGRES_PORT: "5432"
+      TEST_DB_URL: postgresql+asyncpg://sokoflow:sokoflow_test@localhost:5432/sokoflow_test
       DATABASE_URL: postgresql+asyncpg://sokoflow:sokoflow_test@localhost:5432/sokoflow_test
       REDIS_URL: redis://localhost:6379/0
       CELERY_BROKER_URL: redis://localhost:6379/1
       CELERY_RESULT_BACKEND: redis://localhost:6379/2
       SENDER_BACKEND: mock
+      WHATSAPP_VERIFY_TOKEN: ci-test-verify-token
+      WHATSAPP_APP_SECRET: ci-test-app-secret
+      WHATSAPP_PHONE_NUMBER_ID: "1234567890"
+      WHATSAPP_ACCESS_TOKEN: ci-test-access-token
       SECRET_KEY: ci-test-secret-key
       SESSION_TTL_SECONDS: 1800
       DEDUP_TTL_SECONDS: 60
+      CELERY_TASK_MAX_RETRIES: 3
+      CELERY_TASK_RETRY_BACKOFF: 2
+      CELERY_TASK_RETRY_BACKOFF_MAX: 60
+      REPORT_TMP_DIR: /tmp
 
     steps:
       - name: Checkout code
