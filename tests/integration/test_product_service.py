@@ -42,7 +42,7 @@ async def test_create_product_invalid_price(
     payload = {**ProductFactory.as_dict(price=-222), "shop_id": str(shop_id)}
     response = await client.post("/products", json=payload)
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 async def test_get_product_not_found(client: AsyncClient):
