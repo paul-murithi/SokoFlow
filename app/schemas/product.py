@@ -22,8 +22,15 @@ class ProductCreate(ORMBaseSchema):
 
 
 class ProductUpdate(BaseModel):
-    name: str | None = None
+    name: str | None = Field(default=None, min_length=1)
     price: Decimal | None = None
+
+    @field_validator("name")
+    @classmethod
+    def name_cannot_be_null(cls, value):
+        if value is None:
+            raise ValueError("name cannot be null")
+        return value
 
 
 class ProductResponse(ORMBaseSchema):
