@@ -19,8 +19,7 @@ class DeductStockRequest(BaseModel):
 
 
 class UpdateThresholdRequest(BaseModel):
-    low_stock_threshold: int = Field(ge=0)
-
+    low_stock_threshold: int = Field(ge=0, le=1000)
 
 class InventoryResponse(BaseModel):
     id: UUID
