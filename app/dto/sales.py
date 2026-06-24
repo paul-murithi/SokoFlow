@@ -4,10 +4,12 @@ from typing import Self
 
 from sqlalchemy.engine import RowMapping
 
+from uuid import UUID
+
 
 @dataclass(frozen=True)
 class TopProductByUnits:
-    product_id: int
+    product_id: UUID
     units_sold: int
 
     @classmethod
@@ -17,12 +19,13 @@ class TopProductByUnits:
 
 @dataclass(frozen=True)
 class TopProductByRevenue:
-    product_id: int
+    product_id: UUID
     revenue: Decimal
 
     @classmethod
     def from_row(cls, row: RowMapping) -> Self:
         return cls(product_id=row.product_id, revenue=row.revenue)
+
 
 
 @dataclass(frozen=True)

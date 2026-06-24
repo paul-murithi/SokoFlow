@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,11 +10,16 @@ from app.models.sales import Sale
 
 class SalesRepository:
     async def get_top_moving_products(
-        self, date: datetime, db: AsyncSession
+        self, shop_id: UUID, date: datetime, db: AsyncSession
     ) -> tuple[TopProductByUnits | None, TopProductByRevenue | None]:
+        target_date = date.date()
+        
         top_units_stmt = (
             select(Sale.product_id, func.sum(Sale.quantity).label("units_sold"))
-            .where(func.date(Sale.created_at) == date.today())
+            .where(
+                Sale.shop_id == shop_id,
+                func.date(Sale.created_at) == target_date
+            )
             .group_by(Sale.product_id)
             .order_by(func.sum(Sale.quantity).desc())
             .limit(1)
@@ -21,7 +27,10 @@ class SalesRepository:
 
         top_revenue_stmt = (
             select(Sale.product_id, func.sum(Sale.total).label("revenue"))
-            .where(func.date(Sale.created_at) == date.today())
+            .where(
+                Sale.shop_id == shop_id,
+                func.date(Sale.created_at) == target_date
+            )
             .group_by(Sale.product_id)
             .order_by(func.sum(Sale.total).desc())
             .limit(1)
