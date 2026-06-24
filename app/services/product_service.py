@@ -2,11 +2,12 @@ import random
 import string
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.product import Product
-from app.schemas.product import ProductCreate
+from app.schemas.product import ProductCreate, ProductUpdate
 from app.utils.errors import ResourceAlreadyExistsException, ResourceNotFoundException
 
 
@@ -40,7 +41,7 @@ class ProductService:
 
         return product
 
-    async def get_product(self, product_id: UUID, db: AsyncSession) -> Product | None:
+    async def get_product(self, product_id: UUID, db: AsyncSession) -> Product:
         product = await db.get(Product, product_id)
 
         if not product:
@@ -50,11 +51,39 @@ class ProductService:
 
         return product
 
-    def list_products(self) -> None:
-        pass
+    async def list_products(self, shop_id: UUID, db: AsyncSession) -> list[Product]:
+        result = await db.scalars(
+            select(Product).where(Product.shop_id == shop_id)
+        )
+        # TODO: Risk of returning thousands of rows. Change to pagination
+        return list(result.all())
 
-    def update_product(self) -> None:
-        pass
 
-    def delete_product(self) -> None:
-        pass
+    async def update_product(
+        self, product_id: UUID, data: ProductUpdate, db: AsyncSession
+    ) -> Product:
+        product = await self.get_product(product_id, db)
+        update_data = data.model_dump(exclude_unset=True)
+        
+        for key, value in update_data.items():
+            setattr(product, key, value)
+        
+        # Regenerate SKU if name has changed
+        if "name" in update_data:
+            product.sku = self.generate_sku(update_data["name"])
+
+        try:
+            await db.commit()
+            await db.refresh(product)
+            return product
+        except IntegrityError:
+            await db.rollback()
+            raise ResourceAlreadyExistsException(
+                entity_name="Product", field_name="SKU", value=product.sku
+            )
+
+    async def delete_product(self, product_id: UUID, db: AsyncSession) -> None:
+        product = await self.get_product(product_id, db)
+        await db.delete(product)
+        await db.commit()
+
