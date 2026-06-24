@@ -1,5 +1,6 @@
 import pytest
 from httpx import AsyncClient
+from fastapi import status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -80,3 +81,40 @@ async def test_deduct_stock_alert_threshold(
     )
     assert updated_inventory.quantity == 4
     assert low_stock_triggered is True
+
+
+async def test_get_stock_api(client: AsyncClient, product, inventory):
+    response = await client.get(f"/inventory/{product.id}")
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["product_id"] == str(product.id)
+    assert data["quantity"] == inventory.quantity
+
+
+async def test_add_stock_api(client: AsyncClient, db_session: AsyncSession, product, inventory):
+    payload = {"product_id": str(product.id), "quantity": 15}
+    original_quantity = inventory.quantity
+    response = await client.post("/inventory/add", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["quantity"] == original_quantity + 15
+
+
+async def test_deduct_stock_api(client: AsyncClient,db_session: AsyncSession, product, inventory):
+    payload = {"product_id": str(product.id), "quantity": 4}
+    original_quantity = inventory.quantity
+    response = await client.post("/inventory/deduct", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+
+    assert data["inventory"]["quantity"] == original_quantity - 4
+    assert data["low_stock_triggered"] is False
+
+
+async def test_update_threshold_api(client: AsyncClient, product, inventory):
+    payload = {"low_stock_threshold": 12}
+    response = await client.patch(f"/inventory/{product.id}/threshold", json=payload)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["low_stock_threshold"] == 12
+
