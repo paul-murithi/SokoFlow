@@ -64,8 +64,16 @@ class InventoryService:
 
         return inventory, low_stock_triggered
 
-    def get_stock(self) -> None:
-        pass
+    async def get_stock(self, product_id: UUID, db: AsyncSession) -> Inventory:
+        result = await db.execute(
+            select(Inventory).where(Inventory.product_id == product_id)
+        )
+        inventory = result.scalar_one_or_none()
+        if not inventory:
+            raise ResourceNotFoundException(
+                entity_name="Inventory Product", identifier=product_id
+            )
+        return inventory
 
     def is_low_stock(self, quantity_to_deduct: int, current_quantity: int) -> bool:
         return quantity_to_deduct > current_quantity
@@ -73,5 +81,11 @@ class InventoryService:
     def should_send_low_stock_alert(self, old_is_low: bool, new_is_low: bool) -> bool:
         return (old_is_low, new_is_low) == (False, True)
 
-    def update_threshold(self) -> None:
-        pass
+    async def update_threshold(
+        self, product_id: UUID, low_stock_threshold: int, db: AsyncSession
+    ) -> Inventory:
+        inventory = await self.get_stock(product_id, db)
+        inventory.low_stock_threshold = low_stock_threshold
+        await db.commit()
+        await db.refresh(inventory)
+        return inventory
