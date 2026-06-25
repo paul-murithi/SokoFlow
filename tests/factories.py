@@ -4,7 +4,7 @@ from app.models import Product, Shop
 
 
 class ProductFactory(factory.Factory):
-    class Meta:
+    class Meta: # type: ignore
         model = Product
 
     name = factory.Faker("word")
@@ -17,7 +17,7 @@ class ProductFactory(factory.Factory):
 
 
 class ShopFactory(factory.Factory):
-    class Meta:
+    class Meta: # type: ignore
         model = Shop
 
     phone = factory.Faker("bothify", text="+1-###-###-####")
