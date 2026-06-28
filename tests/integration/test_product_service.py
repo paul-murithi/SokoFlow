@@ -90,3 +90,31 @@ async def test_create_product_with_duplicate_sku_returns_409(client: AsyncClient
         second = await client.post("/products", json=product_payload)
         assert second.status_code == status.HTTP_409_CONFLICT
         assert pytest.raises(ResourceAlreadyExistsException)
+
+
+async def test_list_products_api(client: AsyncClient, product):
+    response = await client.get(f"/products?shop_id={product.shop_id}")
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert len(data) >= 1
+    assert any(p["id"] == str(product.id) for p in data)
+
+
+async def test_update_product_api(client: AsyncClient, product):
+    update_payload = {"name": "Brand New Name", "price": "12.99"}
+    response = await client.patch(f"/products/{product.id}", json=update_payload)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["name"] == "Brand New Name"
+    assert Decimal(data["price"]) == Decimal("12.99")
+
+
+async def test_delete_product_api(client: AsyncClient, product):
+    # Delete the product
+    delete_response = await client.delete(f"/products/{product.id}")
+    assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+
+    # Verify not found
+    get_response = await client.get(f"/products/{product.id}")
+    assert get_response.status_code == status.HTTP_404_NOT_FOUND
+
