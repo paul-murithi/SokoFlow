@@ -1,11 +1,11 @@
-import pytest
-from decimal import Decimal
 from datetime import datetime, timezone
+from decimal import Decimal
 from uuid import uuid4
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.sales_service import SalesService
-from app.models.sales import Sale
 from app.utils.errors import ResourceNotFoundException
 
 sales_service = SalesService()

@@ -1,15 +1,15 @@
-import pytest
 from decimal import Decimal
+from unittest.mock import patch
 from uuid import uuid4
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError
-from unittest.mock import MagicMock, AsyncMock, patch
 
-from app.services.product_service import ProductService
-from app.schemas.product import ProductCreate, ProductUpdate
+import pytest
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.product import Product
+from app.schemas.product import ProductCreate, ProductUpdate
+from app.services.product_service import ProductService
 from app.utils.errors import ResourceAlreadyExistsException, ResourceNotFoundException
-from tests.factories import ProductFactory, ShopFactory
 
 product_service = ProductService()
 

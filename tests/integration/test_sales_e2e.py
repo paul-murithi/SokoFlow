@@ -1,9 +1,8 @@
 from decimal import Decimal
-from datetime import datetime
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from httpx import AsyncClient
 from fastapi import status
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.sales_service import SalesService
 

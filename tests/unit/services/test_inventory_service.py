@@ -1,9 +1,9 @@
-import pytest
 from uuid import uuid4
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.inventory_service import InventoryService
-from app.models.inventory import Inventory
 from app.utils.errors import ResourceNotFoundException
 
 inventory_service = InventoryService()

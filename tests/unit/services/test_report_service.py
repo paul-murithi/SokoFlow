@@ -1,6 +1,7 @@
-import pytest
 from datetime import datetime, timezone
 from decimal import Decimal
+
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.report_service import ReportService
