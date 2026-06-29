@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,6 @@ class ReportService:
         self.sales_service = SalesService()
 
     async def get_daily_report_data(
-        self, shop_id: UUID, date: datetime, db: AsyncSession
+        self, shop_id: UUID, date: date, db: AsyncSession
     ) -> dict:
         return await self.sales_service.get_daily_summary(shop_id, date, db)

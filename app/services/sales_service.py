@@ -1,6 +1,7 @@
-from datetime import datetime, time
+from datetime import datetime, time, timedelta, timezone, date
 from decimal import Decimal
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +17,19 @@ inventory_service = InventoryService()
 sales_repo = SalesRepository()
 
 
-class SalesService:
+class SalesService: 
+    @staticmethod
+    def _local_day_bounds_to_utc(date_input: date, local_tz_name: str = "Africa/Nairobi") -> tuple[datetime, datetime]:
+        local_tz = ZoneInfo(local_tz_name)
+    
+        local_start = datetime.combine(date_input, time.min, tzinfo=local_tz)
+        local_end = local_start + timedelta(days=1)
+    
+        utc_start = local_start.astimezone(ZoneInfo("UTC"))
+        utc_end = local_end.astimezone(ZoneInfo("UTC"))
+    
+        return utc_start, utc_end
+
     async def record_sale(
         self, shop_id: UUID, product_id: UUID, quantity: int, db: AsyncSession, recorded_by: str = "Paul"
     ) -> Sale:
@@ -48,12 +61,14 @@ class SalesService:
         return sale
 
     async def get_daily_summary(
-        self, shop_id: UUID, date: datetime, db: AsyncSession
+        self, shop_id: UUID, date: date, db: AsyncSession
     ) -> dict:
+        day_start, day_end = SalesService._local_day_bounds_to_utc(date_input=date)
+
         total_revenue = await self.get_total_revenue(shop_id=shop_id, date=date, db=db)
         total_transactions = await self.get_transaction_count(shop_id=shop_id, date=date, db=db)
         top_units, top_revenue = await sales_repo.get_top_moving_products(
-            shop_id=shop_id, date=date, db=db
+            shop_id=shop_id, day_start=day_start, day_end=day_end, db=db
         )
 
         return {
@@ -69,10 +84,13 @@ class SalesService:
             } if top_revenue else None,
         }
 
-    async def get_total_revenue(self, shop_id: UUID, date: datetime, db: AsyncSession) -> TotalRevenue:
+    async def get_total_revenue(self, shop_id: UUID, date: date, db: AsyncSession) -> TotalRevenue:
+        day_start, day_end = SalesService._local_day_bounds_to_utc(date_input=date)
+
         revenue_stmt = select(func.sum(Sale.total)).where(
             Sale.shop_id == shop_id,
-            func.date(Sale.created_at) == date.date()
+            Sale.created_at >= day_start,
+            Sale.created_at < day_end,
         )
         revenue_result = await db.scalar(revenue_stmt)
         total = revenue_result if revenue_result is not None else Decimal("0")
@@ -80,17 +98,17 @@ class SalesService:
         return TotalRevenue(total=total)
 
     async def get_transaction_count(
-        self, shop_id: UUID, date: datetime, db: AsyncSession
+        self, shop_id: UUID, date: date, db: AsyncSession
     ) -> TransactionCount:
-        target_date_start = datetime.combine(date.date(), time.min)
-        target_date_end = datetime.combine(date.date(), time.max)
+        target_date_start, target_date_end = SalesService._local_day_bounds_to_utc(date_input=date)
 
         transaction_count_stmt = (
             select(func.count().label("transaction_count"))
             .select_from(Sale)
             .where(
                 Sale.shop_id == shop_id,
-                Sale.created_at.between(target_date_start, target_date_end)
+                Sale.created_at >= target_date_start,
+                Sale.created_at < target_date_end,
             )
         )
 
