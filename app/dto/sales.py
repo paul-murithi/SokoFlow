@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Self
+from uuid import UUID
 
 from sqlalchemy.engine import RowMapping
-
-from uuid import UUID
 
 
 @dataclass(frozen=True)
@@ -35,4 +34,9 @@ class TotalRevenue:
 
 @dataclass(frozen=True)
 class TransactionCount:
+    transaction_count: int
+
+@dataclass(frozen=True)
+class RevenueSummary:
+    revenue: Decimal
     transaction_count: int

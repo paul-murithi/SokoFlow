@@ -1,12 +1,11 @@
 from datetime import date, datetime, time, timedelta
-from decimal import Decimal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dto.sales import TotalRevenue, TransactionCount
+from app.dto.sales import RevenueSummary
 from app.models.product import Product
 from app.models.sales import Sale
 from app.repositories.sales_repo import SalesRepository
@@ -72,17 +71,17 @@ class SalesService:
     ) -> dict:
         day_start, day_end = SalesService._local_day_bounds_to_utc(date_input=date)
 
-        total_revenue = await self.get_total_revenue(shop_id=shop_id, date=date, db=db)
-        total_transactions = await self.get_transaction_count(
-            shop_id=shop_id, date=date, db=db
-        )
+        revenue_summary = await self.get_total_revenue_and_count(date=date, shop_id=shop_id, db=db)
+        total_revenue = revenue_summary.revenue
+        transaction_count = revenue_summary.transaction_count
+
         top_units, top_revenue = await sales_repo.get_top_moving_products(
             shop_id=shop_id, day_start=day_start, day_end=day_end, db=db
         )
 
         return {
-            "total_revenue": total_revenue.total,
-            "transaction_count": total_transactions.transaction_count,
+            "total_revenue": total_revenue,
+            "transaction_count": transaction_count,
             "top_product_by_units": {
                 "product_id": top_units.product_id,
                 "units_sold": top_units.units_sold,
@@ -97,38 +96,24 @@ class SalesService:
             else None,
         }
 
-    async def get_total_revenue(
-        self, shop_id: UUID, date: date, db: AsyncSession
-    ) -> TotalRevenue:
+    async def get_total_revenue_and_count(self, date: date, shop_id: UUID, db: AsyncSession) -> RevenueSummary:
         day_start, day_end = SalesService._local_day_bounds_to_utc(date_input=date)
-
-        revenue_stmt = select(func.sum(Sale.total)).where(
-            Sale.shop_id == shop_id,
-            Sale.created_at >= day_start,
-            Sale.created_at < day_end,
-        )
-        revenue_result = await db.scalar(revenue_stmt)
-        total = revenue_result if revenue_result is not None else Decimal("0")
-
-        return TotalRevenue(total=total)
-
-    async def get_transaction_count(
-        self, shop_id: UUID, date: date, db: AsyncSession
-    ) -> TransactionCount:
-        target_date_start, target_date_end = SalesService._local_day_bounds_to_utc(
-            date_input=date
-        )
-
-        transaction_count_stmt = (
-            select(func.count().label("transaction_count"))
-            .select_from(Sale)
+        stmt = (
+            select(
+                func.coalesce(func.sum(Sale.total), 0).label("revenue"),
+                func.count().label("transaction_count"),
+            )
             .where(
                 Sale.shop_id == shop_id,
-                Sale.created_at >= target_date_start,
-                Sale.created_at < target_date_end,
+                Sale.created_at >= day_start,
+                Sale.created_at < day_end,
             )
         )
 
-        count = await db.scalar(transaction_count_stmt) or 0
-
-        return TransactionCount(transaction_count=count)
+        result = await db.execute(stmt)
+        revenue, transaction_count = result.one()
+        
+        return RevenueSummary(
+            revenue=revenue,
+            transaction_count=transaction_count
+        )
