@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +19,6 @@ async def test_get_daily_report_data(db_session: AsyncSession, sale_setup):
     # Record sale
     await sales_service.record_sale(shop.id, product.id, 2, db_session)
 
-    report_data = await report_service.get_daily_report_data(shop.id, datetime.now(), db_session)
+    report_data = await report_service.get_daily_report_data(shop.id, datetime.now(timezone.utc), db_session)
     assert report_data["total_revenue"] == Decimal("200.00")
     assert report_data["transaction_count"] == 1
