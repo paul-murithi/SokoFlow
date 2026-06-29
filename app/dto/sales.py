@@ -40,3 +40,10 @@ class TransactionCount:
 class RevenueSummary:
     revenue: Decimal
     transaction_count: int
+
+@dataclass(frozen=True)
+class LowStockProductDTO:
+    id: UUID
+    name: str
+    quantity: int
+    low_stock_threshold: int

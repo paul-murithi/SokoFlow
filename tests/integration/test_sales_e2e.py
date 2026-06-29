@@ -4,9 +4,12 @@ from fastapi import status
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.product import Product
+from app.services.inventory_service import InventoryService
 from app.services.sales_service import SalesService
 
 sales_service = SalesService()
+inventory_service = InventoryService()
 
 
 async def test_record_sale(db_session: AsyncSession, sale_setup):
@@ -81,3 +84,52 @@ async def test_daily_report_api(client: AsyncClient, sale_setup):
     assert report_data["transaction_count"] == 2
     assert report_data["top_product_by_units"]["product_id"] == str(product.id)
     assert report_data["top_product_by_units"]["units_sold"] == 5
+
+
+async def test_get_products_with_low_stock(db_session: AsyncSession, shop):
+    product_1 = Product(
+        shop_id=shop.id,
+        name="Product 1",
+        price=Decimal("100.50"),
+        sku="PR-TEST-1"
+    )
+    
+    db_session.add(product_1)
+
+    product_2 = Product(
+        shop_id=shop.id,
+        name="Product 2",
+        price=Decimal("100.50"),
+        sku="PR-TEST-2"
+    )
+
+    product_3 = Product(
+        shop_id=shop.id,
+        name="Product 3",
+        price=Decimal("100.50"),
+        sku="PR-TEST-3"
+    )
+
+    db_session.add(product_2)
+    db_session.add(product_3)
+
+    await db_session.flush([product_1, product_2, product_3])
+
+    # Add inventory
+    await inventory_service.add_stock(product_1.id, 10, db_session)
+    await inventory_service.add_stock(product_2.id, 10, db_session)
+    await inventory_service.add_stock(product_3.id, 10, db_session)
+
+    # Deduct stock
+    await inventory_service.deduct_stock(product_1.id, 6, db_session)
+    await inventory_service.deduct_stock(product_2.id, 6, db_session)
+
+    # assert
+    products = await sales_service.get_products_with_low_stock(shop.id, db_session)
+    assert len(products) == 2
+    assert {p.id for p in products} == {product_1.id, product_2.id}
+
+    for product in products:
+        assert product.id is not None
+        assert all(p.quantity == 4 for p in products)
+        assert all(p.low_stock_threshold == 5 for p in products)

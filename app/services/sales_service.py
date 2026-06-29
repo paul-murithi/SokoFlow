@@ -5,7 +5,8 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dto.sales import RevenueSummary
+from app.dto.sales import LowStockProductDTO, RevenueSummary
+from app.models.inventory import Inventory
 from app.models.product import Product
 from app.models.sales import Sale
 from app.repositories.sales_repo import SalesRepository
@@ -117,3 +118,22 @@ class SalesService:
             revenue=revenue,
             transaction_count=transaction_count
         )
+    
+    async def get_products_with_low_stock(self, shop_id: UUID, db: AsyncSession) -> list[LowStockProductDTO]:
+        stmt = (
+            select(
+                Product.id,
+                Product.name,
+                Inventory.quantity,
+                Inventory.low_stock_threshold,
+            )
+            .join(Inventory, Inventory.product_id == Product.id)
+            .where(
+                Product.shop_id == shop_id,
+                Inventory.quantity <= Inventory.low_stock_threshold,
+            )
+        )
+        # TODO: Handle large result sets
+        result = await db.execute(stmt)
+        rows = result.mappings().all()
+        return [LowStockProductDTO(**row) for row in rows]
