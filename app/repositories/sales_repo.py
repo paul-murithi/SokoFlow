@@ -10,15 +10,14 @@ from app.models.sales import Sale
 
 class SalesRepository:
     async def get_top_moving_products(
-        self, shop_id: UUID, date: datetime, db: AsyncSession
+        self, shop_id: UUID, day_start: datetime, day_end: datetime, db: AsyncSession
     ) -> tuple[TopProductByUnits | None, TopProductByRevenue | None]:
-        target_date = date.date()
-        
         top_units_stmt = (
             select(Sale.product_id, func.sum(Sale.quantity).label("units_sold"))
             .where(
                 Sale.shop_id == shop_id,
-                func.date(Sale.created_at) == target_date
+                Sale.created_at >= day_start,
+                Sale.created_at < day_end,
             )
             .group_by(Sale.product_id)
             .order_by(func.sum(Sale.quantity).desc())
@@ -29,7 +28,8 @@ class SalesRepository:
             select(Sale.product_id, func.sum(Sale.total).label("revenue"))
             .where(
                 Sale.shop_id == shop_id,
-                func.date(Sale.created_at) == target_date
+                Sale.created_at >= day_start,
+                Sale.created_at < day_end,
             )
             .group_by(Sale.product_id)
             .order_by(func.sum(Sale.total).desc())
