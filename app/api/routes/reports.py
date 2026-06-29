@@ -1,9 +1,8 @@
-from datetime import datetime, timezone, date
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 
 from app.core.database import get_db
 from app.schemas.sales import DailySummaryResponse
@@ -19,7 +18,6 @@ async def get_daily_report(
     date_: date | None = Query(None, description="ISO-8601 date string (YYYY-MM-DD)"),
     db: AsyncSession = Depends(get_db),
 ) -> DailySummaryResponse:
-
     target_date = date_ if date_ else date.today()
 
     summary = await service.get_daily_report_data(shop_id, target_date, db)
