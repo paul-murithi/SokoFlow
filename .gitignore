@@ -54,6 +54,7 @@ redis_data/
 *.pdf
 celerybeat-schedule
 celerybeat.pid
+celerybeat-schedule*
 
 # ── Logs ─────────────────────────────────────────────────────────
 *.log

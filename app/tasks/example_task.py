@@ -10,3 +10,7 @@ def example_task(message: str):
     """
     logger.info(f"Executed example_task with message: {message}")
     return f"Processed: {message}"
+
+@celery.task(name="heartbeat")
+def heartbeat():
+    logger.info("Heartbeat task executed")

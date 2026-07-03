@@ -1,6 +1,7 @@
 import os
 
 from celery import Celery
+from celery.schedules import crontab
 
 
 broker_url = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/1')
@@ -24,4 +25,10 @@ celery.conf.update(
     broker_connection_retry_on_startup=True
 )
 
+# celery.conf.beat_schedule = {
+#     "heartbeat-every-10-seconds": {
+#         "task": "heartbeat",
+#         "schedule": 10.0,
+#     },
+# }
 # TODO: Risk of results piling up in the result_backend crashing redis
