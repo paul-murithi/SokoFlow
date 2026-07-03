@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from app.api.routes import api_router
+from app.api.example import router as test_router
 from app.utils.errors import (
     InsufficientStockException,
     ResourceAlreadyExistsException,
@@ -16,6 +17,7 @@ app = FastAPI(
 
 
 app.include_router(api_router)
+app.include_router(test_router)
 
 
 @app.exception_handler(ResourceNotFoundException)

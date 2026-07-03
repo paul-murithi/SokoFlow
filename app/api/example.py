@@ -1,0 +1,14 @@
+from fastapi import APIRouter, Body
+
+from app.tasks.example_task import example_task
+
+router = APIRouter()
+
+@router.post("/test")
+async def trigger_test(message: str = Body(..., embed=True)):
+    """Dispatch a Celery background task.
+    
+    Returns immediately after queuing the task.
+    """
+    example_task.apply_async(args=(message,), countdown=10)
+    return {"status": "task dispatched"}
