@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body
 
-from app.tasks.example_task import example_task
+from app.workers.example_task import example_task
 
 router = APIRouter()
 
