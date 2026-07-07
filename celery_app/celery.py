@@ -1,7 +1,8 @@
 import os
 
 from celery import Celery
-from celery.schedules import crontab
+from kombu import Queue
+from app.utils.types import QueueName
 
 
 broker_url = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/1')
@@ -11,7 +12,7 @@ celery = Celery(
     'sokoflow_celery',
     broker=broker_url,
     backend=backend_url,
-    include=['app.tasks']
+    include=["app.workers"],
     )
 
 celery.conf.update(
@@ -22,7 +23,35 @@ celery.conf.update(
     enable_utc=True,
     task_acks_late=False,
     worker_prefetch_multiplier=1,
-    broker_connection_retry_on_startup=True
+    broker_connection_retry_on_startup=True,
+
+    task_default_queue=QueueName.DEFAULT,
+
+    task_queues=(
+        Queue(QueueName.WEBHOOK),
+        Queue(QueueName.REPORTS),
+        Queue(QueueName.REPORTS),
+        Queue(QueueName.MAINTENANCE),
+        Queue(QueueName.DEFAULT)
+    ),
+
+    task_routes={
+        "app.workers.webhook_tasks.*": {
+            "queue": QueueName.WEBHOOK,
+        },
+        "app.workers.report_tasks.*": {
+            "queue": QueueName.REPORTS,
+        },
+        "app.workers.notification_tasks.*": {
+            "queue": QueueName.NOTIFICATIONS,
+        },
+        "app.workers.maintenance_tasks.*": {
+            "queue": QueueName.MAINTENANCE,
+        },
+        "app.workers.example_tasks.*": {
+            "queue": QueueName.DEFAULT,
+        }
+    },
 )
 
 # celery.conf.beat_schedule = {
