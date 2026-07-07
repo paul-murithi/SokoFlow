@@ -5,7 +5,7 @@ from celery_app.celery import celery
 logger = logging.getLogger(__name__)
 
 @celery.task
-def example_task(message: str):
+def sample_task(message: str):
     """Simple task that logs the received message.
     """
     logger.info(f"Executed example_task with message: {message}")

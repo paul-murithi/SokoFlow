@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body
 
-from app.workers.example_task import example_task
+from app.workers.example_task import sample_task
 
 router = APIRouter()
 
@@ -10,5 +10,5 @@ async def trigger_test(message: str = Body(..., embed=True)):
     
     Returns immediately after queuing the task.
     """
-    example_task.apply_async(args=(message,), countdown=10)
+    sample_task.apply_async(args=(message,), countdown=10)
     return {"status": "task dispatched"}
