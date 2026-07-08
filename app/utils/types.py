@@ -1,8 +1,10 @@
 from enum import StrEnum
 
+
 class QueueName(StrEnum):
-    WEBHOOK = "webhook"
-    REPORTS = "reports"
-    NOTIFICATIONS = "notifications"
-    MAINTENANCE = "maintenance"
-    DEFAULT = "default"
+    CONVERSATION = "conversation_tasks"
+    REPORTS = "reports_tasks"
+    NOTIFICATIONS = "notifications_tasks"
+    MAINTENANCE = "maintenance_tasks"
+    DEFAULT = "default_tasks"
+    SCHEDULES = "schedules_tasks"

@@ -13,7 +13,7 @@ celery = Celery(
     broker=broker_url,
     backend=backend_url,
     include=["app.workers"],
-    )
+)
 
 celery.conf.update(
     task_serializer='json',
@@ -28,7 +28,7 @@ celery.conf.update(
     task_default_queue=QueueName.DEFAULT,
 
     task_queues=(
-        Queue(QueueName.WEBHOOK),
+        Queue(QueueName.CONVERSATION),
         Queue(QueueName.REPORTS),
         Queue(QueueName.REPORTS),
         Queue(QueueName.MAINTENANCE),
@@ -36,8 +36,8 @@ celery.conf.update(
     ),
 
     task_routes={
-        "app.workers.webhook_tasks.*": {
-            "queue": QueueName.WEBHOOK,
+        "app.workers.conversation_tasks.*": {
+            "queue": QueueName.CONVERSATION,
         },
         "app.workers.report_tasks.*": {
             "queue": QueueName.REPORTS,
