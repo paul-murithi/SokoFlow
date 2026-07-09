@@ -75,14 +75,14 @@ jobs:
 
       - name: Run Ruff (linting & formatting)
         run: |
-          ruff check .
-          ruff format --check .
+          uv run ruff check .
+          uv run ruff format --check .
 
       - name: Run MyPy (type checking)
-        run: mypy app --ignore-missing-imports
+        run: uv run mypy app --ignore-missing-imports
 
       - name: Run tests with coverage
-        run: pytest --cov=app --cov-report=xml --cov-fail-under=85
+        run: uv run pytest --cov=app --cov-report=xml --cov-fail-under=85
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v4
