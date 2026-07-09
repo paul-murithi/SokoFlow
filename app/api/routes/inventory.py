@@ -1,4 +1,5 @@
 from uuid import UUID
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +36,7 @@ async def add_stock(
 @router.post("/deduct")
 async def deduct_stock(
     payload: DeductStockRequest, db: AsyncSession = Depends(get_db)
-) -> dict:
+) -> dict[str, Any]:  # TODO: Improve function return type annotation
     inventory, low_stock_triggered = await service.deduct_stock(
         payload.product_id, payload.quantity, db
     )
