@@ -1,7 +1,9 @@
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict, Field, field_validator, model_validator)
 
 
 class ORMBaseSchema(BaseModel):
@@ -25,12 +27,11 @@ class ProductUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1)
     price: Decimal | None = None
 
-    @field_validator("name")
-    @classmethod
-    def name_cannot_be_null(cls, value):
-        if value is None:
-            raise ValueError("name cannot be null")
-        return value
+    @model_validator(mode="after")
+    def validate_name(self) -> "ProductUpdate":
+        if "name" in self.model_fields_set and self.name is None:
+            raise ValueError("Name cannot be null")
+        return self
 
 
 class ProductResponse(ORMBaseSchema):
