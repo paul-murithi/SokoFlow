@@ -88,26 +88,17 @@ async def test_daily_report_api(client: AsyncClient, sale_setup):
 
 async def test_get_products_with_low_stock(db_session: AsyncSession, shop):
     product_1 = Product(
-        shop_id=shop.id,
-        name="Product 1",
-        price=Decimal("100.50"),
-        sku="PR-TEST-1"
+        shop_id=shop.id, name="Product 1", price=Decimal("100.50"), sku="PR-TEST-1"
     )
-    
+
     db_session.add(product_1)
 
     product_2 = Product(
-        shop_id=shop.id,
-        name="Product 2",
-        price=Decimal("100.50"),
-        sku="PR-TEST-2"
+        shop_id=shop.id, name="Product 2", price=Decimal("100.50"), sku="PR-TEST-2"
     )
 
     product_3 = Product(
-        shop_id=shop.id,
-        name="Product 3",
-        price=Decimal("100.50"),
-        sku="PR-TEST-3"
+        shop_id=shop.id, name="Product 3", price=Decimal("100.50"), sku="PR-TEST-3"
     )
 
     db_session.add(product_2)

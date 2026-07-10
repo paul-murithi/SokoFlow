@@ -54,8 +54,10 @@ async def test_get_daily_summary(db_session: AsyncSession, sale_setup):
     await sales_service.record_sale(shop.id, product.id, 5, db_session)
     await sales_service.record_sale(shop.id, product.id, 10, db_session)
 
-    summary = await sales_service.get_daily_summary(shop.id, datetime.now(timezone.utc), db_session)
-    
+    summary = await sales_service.get_daily_summary(
+        shop.id, datetime.now(timezone.utc), db_session
+    )
+
     assert summary["total_revenue"] == Decimal("150.00")
     assert summary["transaction_count"] == 2
     assert summary["top_product_by_units"]["product_id"] == product.id
@@ -66,8 +68,10 @@ async def test_get_daily_summary(db_session: AsyncSession, sale_setup):
 
 @pytest.mark.asyncio
 async def test_get_daily_summary_empty(db_session: AsyncSession, shop):
-    summary = await sales_service.get_daily_summary(shop.id, datetime.now(timezone.utc), db_session)
-    
+    summary = await sales_service.get_daily_summary(
+        shop.id, datetime.now(timezone.utc), db_session
+    )
+
     assert summary["total_revenue"] == Decimal("0.00")
     assert summary["transaction_count"] == 0
     assert summary["top_product_by_units"] is None

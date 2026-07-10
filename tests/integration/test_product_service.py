@@ -117,4 +117,3 @@ async def test_delete_product_api(client: AsyncClient, product):
     # Verify not found
     get_response = await client.get(f"/products/{product.id}")
     assert get_response.status_code == status.HTTP_404_NOT_FOUND
-

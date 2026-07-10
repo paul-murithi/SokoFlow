@@ -46,8 +46,5 @@ async def update_product(
 
 
 @router.delete("/{product_id}", status_code=204)
-async def delete_product(
-    product_id: UUID, db: AsyncSession = Depends(get_db)
-) -> None:
+async def delete_product(product_id: UUID, db: AsyncSession = Depends(get_db)) -> None:
     await service.delete_product(product_id, db)
-

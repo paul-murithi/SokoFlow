@@ -15,5 +15,3 @@ api_router.include_router(products_router, prefix="/products", tags=["products"]
 api_router.include_router(reports_router, prefix="/reports", tags=["reports"])
 api_router.include_router(sales_router, prefix="/sales", tags=["sales"])
 api_router.include_router(shop_router, prefix="/shops", tags=["shops"])
-
-

@@ -1,4 +1,5 @@
 from datetime import date, datetime, time, timedelta
+from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -69,10 +70,12 @@ class SalesService:
 
     async def get_daily_summary(
         self, shop_id: UUID, date: date, db: AsyncSession
-    ) -> dict:
+    ) -> dict[str, Any]:  # Improve return type
         day_start, day_end = SalesService._local_day_bounds_to_utc(date_input=date)
 
-        revenue_summary = await self.get_total_revenue_and_count(date=date, shop_id=shop_id, db=db)
+        revenue_summary = await self.get_total_revenue_and_count(
+            date=date, shop_id=shop_id, db=db
+        )
         total_revenue = revenue_summary.revenue
         transaction_count = revenue_summary.transaction_count
 
@@ -97,29 +100,27 @@ class SalesService:
             else None,
         }
 
-    async def get_total_revenue_and_count(self, date: date, shop_id: UUID, db: AsyncSession) -> RevenueSummary:
+    async def get_total_revenue_and_count(
+        self, date: date, shop_id: UUID, db: AsyncSession
+    ) -> RevenueSummary:
         day_start, day_end = SalesService._local_day_bounds_to_utc(date_input=date)
-        stmt = (
-            select(
-                func.coalesce(func.sum(Sale.total), 0).label("revenue"),
-                func.count().label("transaction_count"),
-            )
-            .where(
-                Sale.shop_id == shop_id,
-                Sale.created_at >= day_start,
-                Sale.created_at < day_end,
-            )
+        stmt = select(
+            func.coalesce(func.sum(Sale.total), 0).label("revenue"),
+            func.count().label("transaction_count"),
+        ).where(
+            Sale.shop_id == shop_id,
+            Sale.created_at >= day_start,
+            Sale.created_at < day_end,
         )
 
         result = await db.execute(stmt)
         revenue, transaction_count = result.one()
-        
-        return RevenueSummary(
-            revenue=revenue,
-            transaction_count=transaction_count
-        )
-    
-    async def get_products_with_low_stock(self, shop_id: UUID, db: AsyncSession) -> list[LowStockProductDTO]:
+
+        return RevenueSummary(revenue=revenue, transaction_count=transaction_count)
+
+    async def get_products_with_low_stock(
+        self, shop_id: UUID, db: AsyncSession
+    ) -> list[LowStockProductDTO]:
         stmt = (
             select(
                 Product.id,

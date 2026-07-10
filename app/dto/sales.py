@@ -26,6 +26,13 @@ class TopProductByRevenue:
         return cls(product_id=row.product_id, revenue=row.revenue)
 
 
+@dataclass
+class SalesSummary:
+    total_revenue: float
+    transaction_count: int
+    top_product_by_units: TopProductByUnits | None
+    top_product_by_revenue: TopProductByRevenue | None
+
 
 @dataclass(frozen=True)
 class TotalRevenue:
@@ -36,10 +43,12 @@ class TotalRevenue:
 class TransactionCount:
     transaction_count: int
 
+
 @dataclass(frozen=True)
 class RevenueSummary:
     revenue: Decimal
     transaction_count: int
+
 
 @dataclass(frozen=True)
 class LowStockProductDTO:

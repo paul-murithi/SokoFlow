@@ -52,22 +52,19 @@ class ProductService:
         return product
 
     async def list_products(self, shop_id: UUID, db: AsyncSession) -> list[Product]:
-        result = await db.scalars(
-            select(Product).where(Product.shop_id == shop_id)
-        )
+        result = await db.scalars(select(Product).where(Product.shop_id == shop_id))
         # TODO: Risk of returning thousands of rows. Change to pagination
         return list(result.all())
-
 
     async def update_product(
         self, product_id: UUID, data: ProductUpdate, db: AsyncSession
     ) -> Product:
         product = await self.get_product(product_id, db)
         update_data = data.model_dump(exclude_unset=True)
-        
+
         for key, value in update_data.items():
             setattr(product, key, value)
-        
+
         # Regenerate SKU if name has changed
         if "name" in update_data:
             product.sku = self.generate_sku(update_data["name"])
@@ -86,4 +83,3 @@ class ProductService:
         product = await self.get_product(product_id, db)
         await db.delete(product)
         await db.commit()
-

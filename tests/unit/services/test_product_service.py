@@ -35,8 +35,10 @@ async def test_create_product_duplicate_sku(db_session: AsyncSession, shop):
         price=Decimal("15.50"),
         shop_id=shop.id,
     )
-    
-    with patch.object(db_session, "commit", side_effect=IntegrityError("stmt", "params", Exception())):
+
+    with patch.object(
+        db_session, "commit", side_effect=IntegrityError("stmt", "params", Exception())
+    ):
         with pytest.raises(ResourceAlreadyExistsException):
             await product_service.create_product(data, db_session)
 
@@ -76,7 +78,7 @@ async def test_update_product_success(db_session: AsyncSession, product):
     )
     original_sku = product.sku
     updated = await product_service.update_product(product.id, update_data, db_session)
-    
+
     assert updated.name == "Updated Name"
     assert updated.price == Decimal("299.99")
     assert updated.sku != original_sku
@@ -90,7 +92,7 @@ async def test_update_product_price_only_keeps_sku(db_session: AsyncSession, pro
     original_name = product.name
     original_sku = product.sku
     updated = await product_service.update_product(product.id, update_data, db_session)
-    
+
     assert updated.name == original_name
     assert updated.price == Decimal("49.99")
     assert updated.sku == original_sku
