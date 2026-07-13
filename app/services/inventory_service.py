@@ -1,10 +1,12 @@
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.inventory import Inventory
+from app.repositories.inventory_repo import InventoryRepository
 from app.utils.errors import InsufficientStockException, ResourceNotFoundException
+
+inventory_repo = InventoryRepository()
 
 
 class InventoryService:
@@ -12,10 +14,7 @@ class InventoryService:
         self, product_id: UUID, quantity: int, db: AsyncSession
     ) -> Inventory:
         # TODO: Concurrency and race condition possibility
-        result = await db.execute(
-            select(Inventory).where(Inventory.product_id == product_id)
-        )
-        inventory = result.scalar_one_or_none()
+        inventory = await inventory_repo.get_by_product_id(product_id=product_id, db=db)
 
         if inventory:
             inventory.quantity += quantity
@@ -32,10 +31,7 @@ class InventoryService:
     async def deduct_stock(
         self, product_id: UUID, quantity: int, db: AsyncSession
     ) -> tuple[Inventory, bool]:
-        result = await db.execute(
-            select(Inventory).where(Inventory.product_id == product_id)
-        )
-        inventory = result.scalar_one_or_none()
+        inventory = await inventory_repo.get_by_product_id(product_id=product_id, db=db)
 
         if not inventory:
             raise ResourceNotFoundException(
@@ -65,10 +61,7 @@ class InventoryService:
         return inventory, low_stock_triggered
 
     async def get_stock(self, product_id: UUID, db: AsyncSession) -> Inventory:
-        result = await db.execute(
-            select(Inventory).where(Inventory.product_id == product_id)
-        )
-        inventory = result.scalar_one_or_none()
+        inventory = await inventory_repo.get_by_product_id(product_id=product_id, db=db)
         if not inventory:
             raise ResourceNotFoundException(
                 entity_name="Inventory Product", identifier=product_id

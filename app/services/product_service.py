@@ -2,13 +2,15 @@ import random
 import string
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.product import Product
+from app.repositories.product_repo import ProductRepository
 from app.schemas.product import ProductCreate, ProductUpdate
 from app.utils.errors import ResourceAlreadyExistsException, ResourceNotFoundException
+
+product_repo = ProductRepository()
 
 
 class ProductService:
@@ -52,9 +54,9 @@ class ProductService:
         return product
 
     async def list_products(self, shop_id: UUID, db: AsyncSession) -> list[Product]:
-        result = await db.scalars(select(Product).where(Product.shop_id == shop_id))
+        result = await product_repo.list_products(shop_id=shop_id, db=db)
         # TODO: Risk of returning thousands of rows. Change to pagination
-        return list(result.all())
+        return result
 
     async def update_product(
         self, product_id: UUID, data: ProductUpdate, db: AsyncSession
