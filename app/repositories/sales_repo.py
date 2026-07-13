@@ -1,45 +1,60 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dto.sales import TopProductByRevenue, TopProductByUnits
-from app.models.sales import Sale
+from app.dto.sales import (
+    LowStockProductDTO,
+    RevenueSummary,
+    TopProductByRevenue,
+    TopProductByUnits,
+)
+from app.sql import load_sql
+from app.sql.queries import SalesSQL
 
 
 class SalesRepository:
+    async def get_total_revenue_and_count(
+        self, shop_id: UUID, day_start: datetime, day_end: datetime, db: AsyncSession
+    ) -> RevenueSummary:
+        stmt = text(load_sql(SalesSQL.GET_TOTAL_REVENUE_AND_COUNT))
+        result = await db.execute(
+            stmt,
+            {
+                "shop_id": shop_id,
+                "day_start": day_start,
+                "day_end": day_end,
+            },
+        )
+        revenue, transaction_count = result.one()
+
+        return RevenueSummary(revenue=revenue, transaction_count=transaction_count)
+
+    async def get_products_with_low_stock(
+        self, shop_id: UUID, db: AsyncSession
+    ) -> list[LowStockProductDTO]:
+        stmt = text(load_sql(SalesSQL.GET_PRODUCTS_WITH_LOW_STOCK))
+        result = await db.execute(stmt, {"shop_id": shop_id})
+        rows = result.mappings().all()
+        return [LowStockProductDTO(**row) for row in rows]
+
     async def get_top_moving_products(
         self, shop_id: UUID, day_start: datetime, day_end: datetime, db: AsyncSession
     ) -> tuple[TopProductByUnits | None, TopProductByRevenue | None]:
-        top_units_stmt = (
-            select(Sale.product_id, func.sum(Sale.quantity).label("units_sold"))
-            .where(
-                Sale.shop_id == shop_id,
-                Sale.created_at >= day_start,
-                Sale.created_at < day_end,
-            )
-            .group_by(Sale.product_id)
-            .order_by(func.sum(Sale.quantity).desc())
-            .limit(1)
-        )
+        params = {
+            "shop_id": shop_id,
+            "day_start": day_start,
+            "day_end": day_end,
+        }
 
-        top_revenue_stmt = (
-            select(Sale.product_id, func.sum(Sale.total).label("revenue"))
-            .where(
-                Sale.shop_id == shop_id,
-                Sale.created_at >= day_start,
-                Sale.created_at < day_end,
-            )
-            .group_by(Sale.product_id)
-            .order_by(func.sum(Sale.total).desc())
-            .limit(1)
-        )
+        top_units_stmt = text(load_sql(SalesSQL.GET_TOP_MOVING_PRODUCTS_BY_UNITS))
+        top_revenue_stmt = text(load_sql(SalesSQL.GET_TOP_MOVING_PRODUCTS_BY_REVENUE))
 
-        units_result = (await db.execute(top_units_stmt)).mappings()
+        units_result = (await db.execute(top_units_stmt, params)).mappings()
         top_unit_row = units_result.first()
 
-        revenue_result = (await db.execute(top_revenue_stmt)).mappings()
+        revenue_result = (await db.execute(top_revenue_stmt, params)).mappings()
         top_revenue_row = revenue_result.first()
 
         top_unit = TopProductByUnits.from_row(top_unit_row) if top_unit_row else None
