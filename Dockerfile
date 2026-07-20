@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --python /usr/local/bin/python3.12
+RUN uv sync --frozen --no-dev --python /usr/local/bin/python3.12
 
 # Stage 2: Runtime
 FROM python:3.12-slim AS runtime
