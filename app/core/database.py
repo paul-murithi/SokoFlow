@@ -1,6 +1,7 @@
 import os
 from collections.abc import AsyncGenerator
 
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -10,12 +11,13 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
 
-DATABASE_URL = os.getenv("DATABASE_URL", settings.database_url)
+url = make_url(os.getenv("DATABASE_URL", settings.database_url))
 
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+# Force the driver to asyncpg if it's missing or set to a sync driver
+if url.drivername in ("postgresql", "postgres", "postgresql+psycopg2"):
+    url = url.set(drivername="postgresql+asyncpg")
 
-engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
+engine = create_async_engine(url, pool_pre_ping=True)
 SessionLocal = async_sessionmaker(
     bind=engine,
     autoflush=False,
