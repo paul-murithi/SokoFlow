@@ -17,22 +17,21 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str
-    postgres_port: str
-    test_db_url: str
+    test_db_url: str | None = None
 
     # Redis
     redis_url: str
-    celery_broker_url: str
-    celery_result_backend: str
+    celery_broker_url: str | None = None
+    celery_result_backend: str | None = None
 
     # Messaging
     sender_backend: str = "mock"
 
     # WhatsApp
-    whatsapp_verify_token: str
-    whatsapp_app_secret: str
-    whatsapp_phone_number_id: str
-    whatsapp_access_token: str
+    whatsapp_verify_token: str | None = None
+    whatsapp_app_secret: str | None = None
+    whatsapp_phone_number_id: str | None = None
+    whatsapp_access_token: str | None = None
 
     # Session
     session_ttl_seconds: int = 1800
@@ -40,10 +39,10 @@ class Settings(BaseSettings):
     max_fsm_errors: int = 3
 
     # Celery
-    celery_task_max_retries: int
-    celery_task_retry_backoff: int
-    celery_task_retry_backoff_max: int
-    report_tmp_dir: str
+    celery_task_max_retries: int | None = None
+    celery_task_retry_backoff: int | None = None
+    celery_task_retry_backoff_max: int | None = None
+    report_tmp_dir: str | None = "/tmp/sokoflow_reports"
 
     # Logging
     log_level: str = "INFO"
