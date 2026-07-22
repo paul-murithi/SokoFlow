@@ -7,6 +7,7 @@ class ProductSQL(StrEnum):
 
 class InventorySQL(StrEnum):
     GET_BY_PRODUCT_ID = "inventory/get_by_product_id.sql"
+    ADD_STOCK = "inventory/add_stock.sql"
 
 
 class SalesSQL(StrEnum):

@@ -2,7 +2,15 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import UUID as PG_UUID
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, func, text
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -10,6 +18,7 @@ from app.core.database import Base
 
 class Inventory(Base):
     __tablename__ = "inventory"
+    __table_args__ = (UniqueConstraint("product_id"),)
 
     id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
