@@ -18,6 +18,12 @@ class ResourceAlreadyExistsException(Exception):
         super().__init__(self.message)
 
 
+class ResourceConflictException(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
+
+
 class InvalidPriceException(Exception):
     def __init__(
         self, price: float, message: str = "Product price cannot be negative."

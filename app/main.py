@@ -6,6 +6,7 @@ from app.api.routes import api_router
 from app.utils.errors import (
     InsufficientStockException,
     ResourceAlreadyExistsException,
+    ResourceConflictException,
     ResourceNotFoundException,
 )
 
@@ -64,5 +65,19 @@ async def resource_already_exists_handler(
                 "conflict_field": exc.field_name,
                 "conflict_value": str(exc.value),
             },
+        },
+    )
+
+
+@app.exception_handler(ResourceConflictException)
+async def resource_conflict_handler(
+    request: Request, exc: ResourceConflictException
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={
+            "success": False,
+            "error_type": "RESOURCE_CONFLICT",
+            "message": exc.message,
         },
     )
