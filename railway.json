@@ -1,0 +1,6 @@
+{
+  "$schema": "https://railway.com",
+  "deploy": {
+    "predeployCommand": "alembic upgrade head"
+  }
+}
