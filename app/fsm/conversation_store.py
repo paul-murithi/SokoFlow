@@ -8,7 +8,7 @@ from app.utils.types import SessionState
 class ConversationStore:
     PREFIX = "conversation"
 
-    def __init__(self, redis: Redis[str]) -> None:
+    def __init__(self, redis: Redis) -> None:
         self.redis = redis
 
     def _key(self, conversation_id: str) -> str:

@@ -1,8 +1,12 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from app.api.example import router as test_router
 from app.api.routes import api_router
+from app.core.redis import redis_client
 from app.utils.errors import (
     InsufficientStockException,
     ResourceAlreadyExistsException,
@@ -10,10 +14,18 @@ from app.utils.errors import (
     ResourceNotFoundException,
 )
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    yield
+    await redis_client.aclose()
+
+
 app = FastAPI(
     title="SokoFlow",
     description="Headless WhatsApp ERP for Kenyan SMEs",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 
