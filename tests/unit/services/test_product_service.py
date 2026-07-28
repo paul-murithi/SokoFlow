@@ -9,7 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductUpdate
 from app.services.product_service import ProductService
-from app.utils.errors import ResourceAlreadyExistsException, ResourceNotFoundException
+from app.utils.errors import (
+    ResourceAlreadyExistsException,
+    ResourceConflictException,
+    ResourceNotFoundException,
+)
 
 product_service = ProductService()
 
@@ -81,7 +85,7 @@ async def test_update_product_success(db_session: AsyncSession, product):
 
     assert updated.name == "Updated Name"
     assert updated.price == Decimal("299.99")
-    assert updated.sku != original_sku
+    assert updated.sku == original_sku
 
 
 @pytest.mark.asyncio
@@ -125,3 +129,12 @@ async def test_delete_product_not_found(db_session: AsyncSession):
     random_id = uuid4()
     with pytest.raises(ResourceNotFoundException):
         await product_service.delete_product(random_id, db_session)
+
+
+@pytest.mark.asyncio
+async def test_delete_product_conflict(db_session: AsyncSession, product):
+    with patch.object(
+        db_session, "commit", side_effect=IntegrityError("stmt", "params", Exception())
+    ):
+        with pytest.raises(ResourceConflictException):
+            await product_service.delete_product(product.id, db_session)

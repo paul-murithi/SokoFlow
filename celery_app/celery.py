@@ -3,7 +3,7 @@ import os
 from celery import Celery
 from kombu import Queue
 
-from app.utils.types import QueueName
+from app.workers.queues import QueueName
 
 broker_url = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/1")
 backend_url = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/2")

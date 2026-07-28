@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class CreateShop(BaseModel):
@@ -13,3 +13,5 @@ class ShopResponse(BaseModel):
     name: str
     phone: str
     locale: str
+
+    model_config = ConfigDict(from_attributes=True)
