@@ -10,7 +10,7 @@ from app.models.product import Product
 from app.models.sales import Sale
 from app.repositories.sales_repo import SalesRepository
 from app.services.inventory_service import InventoryService
-from app.utils.errors import ResourceNotFoundException
+from app.utils.errors import ResourceConflictException, ResourceNotFoundException
 
 inventory_service = InventoryService()
 sales_repo = SalesRepository()
@@ -19,11 +19,19 @@ sales_repo = SalesRepository()
 class SalesService:
     @staticmethod
     def _local_day_bounds_to_utc(
-        date_input: date, local_tz_name: str = "Africa/Nairobi"
+        date_input: date | datetime, local_tz_name: str = "Africa/Nairobi"
     ) -> tuple[datetime, datetime]:
         local_tz = ZoneInfo(local_tz_name)
 
-        local_start = datetime.combine(date_input, time.min, tzinfo=local_tz)
+        if isinstance(date_input, datetime):
+            if date_input.tzinfo is None:
+                normalized_date = date_input.date()
+            else:
+                normalized_date = date_input.astimezone(local_tz).date()
+        else:
+            normalized_date = date_input
+
+        local_start = datetime.combine(normalized_date, time.min, tzinfo=local_tz)
         local_end = local_start + timedelta(days=1)
 
         utc_start = local_start.astimezone(ZoneInfo("UTC"))
@@ -37,37 +45,40 @@ class SalesService:
         product_id: UUID,
         quantity: int,
         db: AsyncSession,
-        recorded_by: str = "Paul",
+        recorded_by: str = "System",
     ) -> Sale:
-        # Load Product
-        product = await db.get(Product, product_id)
-        if product is None:
-            raise ResourceNotFoundException(
-                entity_name="Product", identifier=product_id
+        async with db.begin_nested():
+            product = await db.get(Product, product_id)
+            if product is None:
+                raise ResourceNotFoundException(
+                    entity_name="Product", identifier=product_id
+                )
+
+            if product.shop_id != shop_id:
+                raise ResourceConflictException(
+                    "Product does not belong to the specified shop."
+                )
+
+            await inventory_service.deduct_stock(
+                product_id=product_id, quantity=quantity, db=db, commit=False
             )
 
-        # Reduce Inventory
-        await inventory_service.deduct_stock(
-            product_id=product_id, quantity=quantity, db=db
-        )
+            sale = Sale(
+                shop_id=shop_id,
+                product_id=product_id,
+                quantity=quantity,
+                unit_price=product.price,
+                recorded_by=recorded_by,
+            )
 
-        # Create Sale
-        sale = Sale(
-            shop_id=shop_id,
-            product_id=product_id,
-            quantity=quantity,
-            unit_price=product.price,
-            recorded_by=recorded_by,
-        )
+            db.add(sale)
+            await db.flush()
+            await db.refresh(sale)
 
-        db.add(sale)
-        await db.commit()
-        await db.refresh(sale)
-
-        return sale
+            return sale
 
     async def get_daily_summary(
-        self, shop_id: UUID, date: date, db: AsyncSession
+        self, shop_id: UUID, date: date | datetime, db: AsyncSession
     ) -> dict[str, Any]:  # Improve return type
         day_start, day_end = SalesService._local_day_bounds_to_utc(date_input=date)
 
@@ -99,7 +110,7 @@ class SalesService:
         }
 
     async def get_total_revenue_and_count(
-        self, date: date, shop_id: UUID, db: AsyncSession
+        self, date: date | datetime, shop_id: UUID, db: AsyncSession
     ) -> RevenueSummary:
         day_start, day_end = SalesService._local_day_bounds_to_utc(date_input=date)
         return await sales_repo.get_total_revenue_and_count(

@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.sales_service import SalesService
-from app.utils.errors import ResourceNotFoundException
+from app.utils.errors import ResourceConflictException, ResourceNotFoundException
 
 sales_service = SalesService()
 
@@ -39,6 +39,20 @@ async def test_record_sale_product_not_found(db_session: AsyncSession):
         await sales_service.record_sale(
             shop_id=uuid4(),
             product_id=random_id,
+            quantity=5,
+            db=db_session,
+        )
+
+
+@pytest.mark.asyncio
+async def test_record_sale_shop_mismatch(db_session: AsyncSession, sale_setup):
+    data = await sale_setup(price=Decimal("50.00"), quantity=20)
+    product = data["product"]
+
+    with pytest.raises(ResourceConflictException):
+        await sales_service.record_sale(
+            shop_id=uuid4(),
+            product_id=product.id,
             quantity=5,
             db=db_session,
         )
