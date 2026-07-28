@@ -1,8 +1,8 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import List
+from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class QueueName(StrEnum):
@@ -19,6 +19,7 @@ class QueueName(StrEnum):
 
 
 # FSM Redis Sessions
+# TODO: Add more states later
 class SessionState(StrEnum):
     IDLE = "IDLE"
     SALE = "SALE"
@@ -29,11 +30,11 @@ class SessionState(StrEnum):
 
 
 class SessionContext(BaseModel):
-    product_name: str
-    flow_started_at: datetime
-    history: List[SessionState]
-    error_count: int
-    last_activity: datetime
+    product_name: Optional[str] = None
+    flow_started_at: Optional[datetime] = None
+    history: List[SessionState] = Field(default_factory=list)
+    error_count: int = 0
+    last_activity: Optional[datetime] = None
 
 
 class UserSession(BaseModel):
