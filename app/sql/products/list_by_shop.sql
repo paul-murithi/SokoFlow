@@ -9,3 +9,4 @@ SELECT
 	products.updated_at
 FROM products
 WHERE products.shop_id = :shop_id
+ORDER BY products.created_at DESC, products.id DESC
