@@ -8,7 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.product import Product
 from app.repositories.product_repo import ProductRepository
 from app.schemas.product import ProductCreate, ProductUpdate
-from app.utils.errors import ResourceAlreadyExistsException, ResourceNotFoundException
+from app.utils.errors import (
+    ResourceAlreadyExistsException,
+    ResourceConflictException,
+    ResourceNotFoundException,
+)
 
 product_repo = ProductRepository()
 
@@ -41,8 +45,6 @@ class ProductService:
                 entity_name="Product", field_name="SKU", value=product.sku
             )
 
-        return product
-
     async def get_product(self, product_id: UUID, db: AsyncSession) -> Product:
         product = await db.get(Product, product_id)
 
@@ -67,10 +69,6 @@ class ProductService:
         for key, value in update_data.items():
             setattr(product, key, value)
 
-        # Regenerate SKU if name has changed
-        if "name" in update_data:
-            product.sku = self.generate_sku(update_data["name"])
-
         try:
             await db.commit()
             await db.refresh(product)
@@ -83,5 +81,12 @@ class ProductService:
 
     async def delete_product(self, product_id: UUID, db: AsyncSession) -> None:
         product = await self.get_product(product_id, db)
-        await db.delete(product)
-        await db.commit()
+        try:
+            await db.delete(product)
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            raise ResourceConflictException(
+                "Product cannot be deleted "
+                "because related inventory or sales records exist."
+            )

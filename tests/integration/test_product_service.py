@@ -34,6 +34,15 @@ async def test_create_product(
     assert product.shop_id == UUID(shop_id)
 
 
+async def test_create_shop_duplicate_phone_returns_409(client: AsyncClient):
+    shop_payload = ShopFactory.as_dict()
+    first_response = await client.post("/shops", json=shop_payload)
+    assert first_response.status_code == status.HTTP_201_CREATED
+
+    second_response = await client.post("/shops", json=shop_payload)
+    assert second_response.status_code == status.HTTP_409_CONFLICT
+
+
 async def test_create_product_invalid_price(
     client: AsyncClient, db_session: AsyncSession
 ):
