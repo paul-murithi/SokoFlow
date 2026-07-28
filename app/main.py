@@ -1,3 +1,4 @@
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -13,10 +14,21 @@ from app.utils.errors import (
     ResourceConflictException,
     ResourceNotFoundException,
 )
+from app.utils.types import LUA_SAVE_SESSION_SCRIPT
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    global LUA_UPDATE_SESSION
+
+    current_dir = os.path.dirname(__file__)
+    script_path = os.path.join(current_dir, "fsm", "lua", LUA_SAVE_SESSION_SCRIPT)
+
+    with open(script_path, "r") as f:
+        lua_content = f.read()
+
+    LUA_UPDATE_SESSION = redis_client.register_script(lua_content)  # type: ignore
+
     yield
     await redis_client.aclose()
 

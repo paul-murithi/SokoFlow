@@ -19,6 +19,10 @@ class QueueName(StrEnum):
 
 
 # FSM Redis Sessions
+LUA_SAVE_SESSION_SCRIPT = "update_session_state.lua"
+LUA_UPDATE_SESSION = None
+
+
 # TODO: Add more states later
 class SessionState(StrEnum):
     IDLE = "IDLE"
