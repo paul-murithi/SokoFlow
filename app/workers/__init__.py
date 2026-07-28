@@ -3,6 +3,7 @@ from . import (
     example_task,
     maintenance_tasks,
     notification_tasks,
+    queues,
     report_tasks,
 )
 
@@ -12,4 +13,5 @@ __all__ = [
     "maintenance_tasks",
     "notification_tasks",
     "report_tasks",
+    "queues",
 ]

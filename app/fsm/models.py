@@ -5,25 +5,6 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
-class QueueName(StrEnum):
-    """
-    Celery Worker Queue names
-    """
-
-    CONVERSATION = "conversation_tasks"
-    REPORTS = "reports_tasks"
-    NOTIFICATIONS = "notifications_tasks"
-    MAINTENANCE = "maintenance_tasks"
-    DEFAULT = "default_tasks"
-    SCHEDULES = "schedules_tasks"
-
-
-# FSM Redis Sessions
-LUA_SAVE_SESSION_SCRIPT = "update_session_state.lua"
-LUA_UPDATE_SESSION = None
-
-
-# TODO: Add more states later
 class SessionState(StrEnum):
     IDLE = "IDLE"
     SALE = "SALE"
