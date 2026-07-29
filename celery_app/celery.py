@@ -12,7 +12,13 @@ celery = Celery(
     "sokoflow_celery",
     broker=broker_url,
     backend=backend_url,
-    include=["app.workers"],
+    include=[
+        "app.workers.conversation_tasks",
+        "app.workers.example_task",
+        "app.workers.maintenance_tasks",
+        "app.workers.notification_tasks",
+        "app.workers.report_tasks",
+    ],
 )
 
 celery.conf.update(
@@ -45,7 +51,7 @@ celery.conf.update(
         "app.workers.maintenance_tasks.*": {
             "queue": QueueName.MAINTENANCE,
         },
-        "app.workers.example_tasks.*": {
+        "app.workers.example_task.*": {
             "queue": QueueName.DEFAULT,
         },
     },
