@@ -1,5 +1,5 @@
 from datetime import datetime
-from enum import StrEnum
+from enum import IntEnum, StrEnum
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -26,3 +26,9 @@ class UserSession(BaseModel):
     phone: str
     state: SessionState
     context: SessionContext
+
+
+class UpdateSessionResult(IntEnum):
+    SUCCESS = 1
+    STATE_MISMATCH = 0
+    CORRUPTED_DATA = -1

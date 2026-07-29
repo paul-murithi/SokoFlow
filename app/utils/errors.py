@@ -69,3 +69,15 @@ class InvalidAggregationDateException(Exception):
         self.provided_date = provided_date
         self.message = f"{message} Received: {provided_date}"
         super().__init__(self.message)
+
+
+class SessionStateMismatchError(Exception):
+    def __init__(self, session_id: str) -> None:
+        self.message = f"Session {session_id} changed before save"
+        super().__init__(self.message)
+
+
+class CorruptedSessionError(Exception):
+    def __init__(self, session_id: str) -> None:
+        self.message = f"Session {session_id} was corrupted"
+        super().__init__(self.message)
