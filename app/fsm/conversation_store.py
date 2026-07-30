@@ -20,6 +20,19 @@ class ConversationStore:
     def _key(self, session_id: str) -> str:
         return f"{self.PREFIX}:{session_id}"
 
+    def _dedup_key(self, message_id: str) -> str:
+        return f"dedup:{message_id}"
+
+    async def is_duplicate(self, message_id: str, ttl: int = 60) -> bool:
+        redis_key = self._dedup_key(message_id)
+        created = await self.redis.set(
+            redis_key,
+            "1",
+            nx=True,
+            ex=ttl,
+        )
+        return not bool(created)
+
     async def get_session(self, session_id: str) -> UserSession | None:
         raw_redis_str = await self.redis.get(self._key(session_id))
 

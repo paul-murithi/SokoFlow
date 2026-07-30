@@ -8,6 +8,20 @@ from app.utils.errors import CorruptedSessionError, SessionStateMismatchError
 
 
 @pytest.mark.asyncio
+async def test_is_duplicate_when_key_exists(store, redis_mock):
+    redis_mock.set.return_value = False
+
+    assert await store.is_duplicate("abc123") is True
+
+
+@pytest.mark.asyncio
+async def test_is_duplicate_when_key_created(store, redis_mock):
+    redis_mock.set.return_value = True
+
+    assert await store.is_duplicate("abc123") is False
+
+
+@pytest.mark.asyncio
 async def test_get_session_returns_none_when_missing(store, redis_mock):  # pyright: ignore[]
     redis_mock.get.return_value = None
 

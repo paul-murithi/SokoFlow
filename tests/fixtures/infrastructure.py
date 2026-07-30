@@ -80,5 +80,6 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 def redis_mock():
     redis = Mock()
     redis.get = AsyncMock()
+    redis.set = AsyncMock()
     redis.delete = AsyncMock()
     return redis
