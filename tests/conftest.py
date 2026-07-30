@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import AsyncGenerator
 from decimal import Decimal
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -12,11 +13,17 @@ from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 from app.core.database import Base, get_db
+from app.fsm.conversation_store import ConversationStore
+from app.fsm.models import SessionContext, SessionState, UserSession
 from app.main import app
 from app.models import *  # noqa: F403, F401
 from app.models.inventory import Inventory
 from app.models.product import Product
 from tests.factories import ProductFactory, ShopFactory
+
+"""
+Pytest global DB and event loop fixtures
+"""
 
 
 @pytest.fixture(scope="session")
@@ -41,20 +48,6 @@ async def engine():
         await conn.run_sync(Base.metadata.drop_all)
 
     await engine.dispose()
-
-
-"""
-@pytest.fixture
-async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
-    session_factory = async_sessionmaker(
-        bind=engine,
-        expire_on_commit=False,
-        autoflush=False,
-    )
-
-    async with session_factory() as session:
-        yield session
-"""
 
 
 @pytest.fixture
@@ -91,6 +84,11 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
         yield ac
 
     app.dependency_overrides.clear()
+
+
+"""
+Pytest Business core fixtures
+"""
 
 
 @pytest.fixture
@@ -151,3 +149,39 @@ def sale_setup(db_session, shop):
         }
 
     return create
+
+
+"""
+Pytest FSM fixtures
+"""
+
+
+@pytest.fixture
+def redis_mock():
+    redis = Mock()
+    redis.get = AsyncMock()
+    redis.delete = AsyncMock()
+    return redis
+
+
+@pytest.fixture
+def store(redis_mock):  # pyright: ignore[]
+    return ConversationStore(redis=redis_mock)
+
+
+@pytest.fixture
+def session():
+    return UserSession(
+        phone="+254700000000",
+        state=SessionState.SALE,
+        context=SessionContext(product_name="Sugar"),
+    )
+
+
+@pytest.fixture
+def idle_session():
+    return UserSession(
+        phone="+254700000001",
+        state=SessionState.IDLE,
+        context=SessionContext(),
+    )
