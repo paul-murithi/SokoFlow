@@ -1,3 +1,5 @@
+from typing import cast
+
 from pydantic import ValidationError
 from redis.asyncio import Redis
 from typing_extensions import assert_never
@@ -65,5 +67,6 @@ class ConversationStore:
     async def delete_session(
         self,
         session_id: str,
-    ) -> None:
-        await self.redis.delete(self._key(session_id))
+    ) -> bool:
+        deleted = cast(int, await self.redis.delete(self._key(session_id)))
+        return deleted == 1
