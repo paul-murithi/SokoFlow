@@ -78,7 +78,7 @@ def main() -> None:
 
     # Send payload
     response = send_payload(payload=payload, client=client, url=server_url)
-    print(f"response: {response}")
+    print(f"response: {response.json()}")
 
 
 if __name__ == "__main__":

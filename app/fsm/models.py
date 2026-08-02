@@ -65,3 +65,8 @@ class Entry(BaseModel):
 class WhatsAppWebhook(BaseModel):
     object: str
     entry: list[Entry]
+
+
+class WebhookResponse(BaseModel):
+    status: str = Field(default="success")
+    message: str = Field(default="accepted")
