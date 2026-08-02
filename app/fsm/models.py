@@ -34,6 +34,11 @@ class UpdateSessionResult(IntEnum):
     CORRUPTED_DATA = -1
 
 
+"""
+WhatsApp Message
+"""
+
+
 class Text(BaseModel):
     body: str
 
