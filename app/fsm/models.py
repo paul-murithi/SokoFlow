@@ -7,6 +7,10 @@ from pydantic import BaseModel, Field
 
 class SessionState(StrEnum):
     IDLE = "IDLE"
+    START_ADD_PRODUCT = "START_ADD_PRODUCT"
+    ADD_PRODUCT_NAME = "ADD_PRODUCT_NAME"
+    ADD_PRODUCT_PRICE = "ADD_PRODUCT_PRICE"
+    ADD_PRODUCT_QTY = "ADD_PRODUCT_QTY"
     SALE = "SALE"
     WAIT_PRODUCT = "RECORD_SALE_PRODUCT"
     WAIT_QTY = "RECORD_SALE_QTY"
@@ -93,3 +97,12 @@ class InboundMessagePayload(BaseModel):
             # TODO: Handle non-message payloads (like status webhooks)
             # TODO: logging
             return None
+
+
+class FSMResult(BaseModel):
+    """The immutable outcome of an FSM state transition computation."""
+
+    previous_state: SessionState
+    new_state: SessionState
+    context: SessionContext
+    reply_text: str

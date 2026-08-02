@@ -81,3 +81,28 @@ class CorruptedSessionError(Exception):
     def __init__(self, session_id: str) -> None:
         self.message = f"Session {session_id} was corrupted"
         super().__init__(self.message)
+
+
+class FSMError(Exception):
+    """Base exception for all Finite State Machine errors."""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class InvalidInputError(FSMError):
+    """Raised when user input fails state validation."""
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(message)
+
+
+class MaxErrorsExceededError(FSMError):
+    """
+        Raised when a user repeatedly provides \
+        invalid input beyond the allowed threshold.
+    """
+
+    pass
