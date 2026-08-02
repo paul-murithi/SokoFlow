@@ -32,3 +32,31 @@ class UpdateSessionResult(IntEnum):
     SUCCESS = 1
     STATE_MISMATCH = 0
     CORRUPTED_DATA = -1
+
+
+class Text(BaseModel):
+    body: str
+
+
+class Message(BaseModel):
+    from_: str = Field(alias="from")
+    id: str
+    type: str
+    text: Text
+
+
+class Value(BaseModel):
+    messages: list[Message]
+
+
+class Change(BaseModel):
+    value: Value
+
+
+class Entry(BaseModel):
+    changes: list[Change]
+
+
+class WhatsAppWebhook(BaseModel):
+    object: str
+    entry: list[Entry]
