@@ -70,3 +70,26 @@ class WhatsAppWebhook(BaseModel):
 class WebhookResponse(BaseModel):
     status: str = Field(default="success")
     message: str = Field(default="accepted")
+
+
+class InboundMessagePayload(BaseModel):
+    sender: str
+    message_text: str
+    message_id: str
+
+    @classmethod
+    def from_whatsapp_webhook(
+        cls, webhook: WhatsAppWebhook
+    ) -> "InboundMessagePayload | None":
+        """Transforms a raw Meta webhook into a flat internal contract."""
+        try:
+            message = webhook.entry[0].changes[0].value.messages[0]
+            return cls(
+                sender=message.from_,
+                message_text=message.text.body if message.text else "",
+                message_id=message.id,
+            )
+        except (IndexError, AttributeError, TypeError):
+            # TODO: Handle non-message payloads (like status webhooks)
+            # TODO: logging
+            return None
