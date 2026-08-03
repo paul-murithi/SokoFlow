@@ -1,11 +1,15 @@
+import asyncio
 import logging
 
-from app.fsm.models import InboundMessagePayload
+from app.fsm.conversation_store import ConversationStore, get_conversation_store
+from app.fsm.engine import FSMEngine
+from app.fsm.models import InboundMessagePayload, SessionContext, SessionState, UserSession
 from celery_app.celery import celery
 
 from .message_sender import MessageDeliveryError, build_message_sender
 
 logger = logging.getLogger(__name__)
+MESSAGE_SENDER = build_message_sender()
 
 # Minimal state management for the simulator.
 # TODO: Replace with FSM state management
@@ -42,12 +46,33 @@ def build_reply(inbound_message: InboundMessagePayload) -> str:
 
 @celery.task
 def conversation_task(payload: dict[str, object]) -> str:
+    return asyncio.run(conversation(payload))
+
+async def conversation(payload: dict[str, object]) -> str:
+    # Reconstruct flat payload
+    store = get_conversation_store()
     inbound_message = InboundMessagePayload.model_validate(payload)
+    phone_number = inbound_message.sender
+
+    # Fetch or Initialize session
+    old_session= await store.get_session(phone_number)
+    if old_session is None:
+        current_session = UserSession(
+            phone=phone_number,
+            state=SessionState.IDLE,
+            context=SessionContext()
+        )
+    else:
+        current_session = old_session.model_copy(deep=True)
+
+    print(current_session)
+    # TODO: Process inside FSM
+    fsm_engine = FSMEngine() # pyright: ignore[]
+
     reply_text = build_reply(inbound_message)
-    message_sender = build_message_sender()
 
     try:
-        message_sender.send_text(inbound_message.sender, reply_text)
+        MESSAGE_SENDER.send_text(inbound_message.sender, reply_text)
     except MessageDeliveryError:
         logger.exception("Failed to deliver reply")
 
