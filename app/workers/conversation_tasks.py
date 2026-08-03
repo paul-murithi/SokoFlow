@@ -1,13 +1,11 @@
 import logging
 
-import httpx
-
 from app.fsm.models import InboundMessagePayload
 from celery_app.celery import celery
 
-logger = logging.getLogger(__name__)
+from .message_sender import MessageDeliveryError, build_message_sender
 
-SIMULATOR_CALLBACK_URL = "http://localhost:8080"
+logger = logging.getLogger(__name__)
 
 # Minimal state management for the simulator.
 # TODO: Replace with FSM state management
@@ -46,14 +44,11 @@ def build_reply(inbound_message: InboundMessagePayload) -> str:
 def conversation_task(payload: dict[str, object]) -> str:
     inbound_message = InboundMessagePayload.model_validate(payload)
     reply_text = build_reply(inbound_message)
+    message_sender = build_message_sender()
 
     try:
-        httpx.post(
-            SIMULATOR_CALLBACK_URL,
-            json={"reply_text": reply_text},
-            timeout=5.0,
-        ).raise_for_status()
-    except httpx.HTTPError:
-        logger.exception("Failed to deliver simulator reply")
+        message_sender.send_text(inbound_message.sender, reply_text)
+    except MessageDeliveryError:
+        logger.exception("Failed to deliver reply")
 
     return reply_text
