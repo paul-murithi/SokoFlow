@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from redis.asyncio import Redis
 from typing_extensions import assert_never
 
+from app.core.redis import get_redis
 from app.fsm.models import SessionState, UpdateSessionResult, UserSession
 from app.utils.errors import CorruptedSessionError, SessionStateMismatchError
 
@@ -83,3 +84,7 @@ class ConversationStore:
     ) -> bool:
         deleted = cast(int, await self.redis.delete(self._key(session_id)))
         return deleted == 1
+
+
+def get_conversation_store() -> ConversationStore:
+    return ConversationStore(get_redis())
