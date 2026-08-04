@@ -1,6 +1,8 @@
 from datetime import datetime
+from decimal import Decimal
 from enum import IntEnum, StrEnum
 from typing import List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -11,6 +13,7 @@ class SessionState(StrEnum):
     ADD_PRODUCT_NAME = "ADD_PRODUCT_NAME"
     ADD_PRODUCT_PRICE = "ADD_PRODUCT_PRICE"
     ADD_PRODUCT_QTY = "ADD_PRODUCT_QTY"
+    CONFIRM_ADD_PRODUCT = "CONFIRM_ADD_PRODUCT"
     SALE = "SALE"
     WAIT_PRODUCT = "RECORD_SALE_PRODUCT"
     WAIT_QTY = "RECORD_SALE_QTY"
@@ -19,7 +22,10 @@ class SessionState(StrEnum):
 
 
 class SessionContext(BaseModel):
+    shop_id: Optional[UUID] = None
     product_name: Optional[str] = None
+    product_price: Optional[Decimal] = None
+    product_qty: Optional[int] = None
     flow_started_at: Optional[datetime] = None
     history: List[SessionState] = Field(default_factory=list)
     error_count: int = 0
@@ -74,6 +80,12 @@ class WhatsAppWebhook(BaseModel):
 class WebhookResponse(BaseModel):
     status: str = Field(default="success")
     message: str = Field(default="accepted")
+
+
+class Intent(StrEnum):
+    UNKNOWN = "UNKNOWN"
+    ADD_PRODUCT = "ADD_PRODUCT"
+    RECORD_SALE = "RECORD_SALE"
 
 
 class InboundMessagePayload(BaseModel):
