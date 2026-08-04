@@ -1,5 +1,6 @@
 import os
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import (
@@ -13,7 +14,7 @@ from app.core.config import settings
 
 url = make_url(os.getenv("DATABASE_URL", settings.database_url))
 
-# Force the driver to asyncpg if it's missing or set to a sync driver
+# Force the driver to asyncpg
 if url.drivername in ("postgresql", "postgres", "postgresql+psycopg2"):
     url = url.set(drivername="postgresql+asyncpg")
 
@@ -29,6 +30,19 @@ class Base(DeclarativeBase):
     pass
 
 
+# FastAPI DI
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with SessionLocal() as session:
         yield session
+
+
+# Worker DB
+@asynccontextmanager
+async def get_worker_db() -> AsyncGenerator[AsyncSession, None]:
+    async with SessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

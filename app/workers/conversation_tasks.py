@@ -1,6 +1,7 @@
 import logging
 
 from app.core.config import settings
+from app.core.database import get_worker_db
 from app.fsm.conversation_store import get_conversation_store
 from app.fsm.engine import FSMEngine
 from app.fsm.models import (
@@ -46,10 +47,11 @@ async def conversation(payload: dict[str, object]) -> str:
         current_session = old_session.model_copy(deep=True)
 
     # Process Message
-    fsm_engine = FSMEngine()
-    result = await fsm_engine.process_message(
-        current_session, inbound_message.message_text
-    )
+    async with get_worker_db() as db:
+        fsm_engine = FSMEngine(db_session=db)
+        result = await fsm_engine.process_message(
+            current_session, inbound_message.message_text
+        )
 
     # Save message to Session
     await store.save_session(
