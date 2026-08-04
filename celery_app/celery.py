@@ -1,12 +1,24 @@
 import os
+from typing import Any
 
 from celery import Celery
+from celery.signals import worker_process_init
 from kombu import Queue
 
+from app.core.redis import redis_client
+from app.fsm.session_lua import register_session_update_script
+from app.workers.async_runtime import initialize
 from app.workers.queues import QueueName
 
 broker_url = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/1")
 backend_url = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/2")
+
+
+@worker_process_init.connect
+def initialize_worker(**kwargs: Any) -> None:
+    initialize()
+    register_session_update_script(redis_client)
+
 
 celery = Celery(
     "sokoflow_celery",
