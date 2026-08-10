@@ -64,7 +64,7 @@ async def test_save_session_state_transition(store: ConversationStore):
 
     updated_session = UserSession(
         phone="+254712345678",
-        state=SessionState.SALE,
+        state=SessionState.RECORD_SALE_PRODUCT,
         context=SessionContext(product_name="Sugar"),
     )
 
@@ -76,7 +76,7 @@ async def test_save_session_state_transition(store: ConversationStore):
 
     retrieved = await store.get_session(session_id)
     assert retrieved is not None
-    assert retrieved.state == SessionState.SALE
+    assert retrieved.state == SessionState.RECORD_SALE_PRODUCT
     assert retrieved.context.product_name == "Sugar"
 
 
@@ -94,12 +94,12 @@ async def test_save_session_state_mismatch_error(store: ConversationStore):
     # Attempt save with wrong expected old_session state
     mismatched_old_session = UserSession(
         phone="+254712345678",
-        state=SessionState.SALE,
+        state=SessionState.RECORD_SALE_PRODUCT,
         context=SessionContext(),
     )
     next_session = UserSession(
         phone="+254712345678",
-        state=SessionState.CONFIRM,
+        state=SessionState.CONFIRM_SALE,
         context=SessionContext(),
     )
 
@@ -112,9 +112,7 @@ async def test_save_session_state_mismatch_error(store: ConversationStore):
 
 
 @pytest.mark.asyncio
-async def test_save_session_corrupted_data_error(
-    store: ConversationStore, redis_client: Redis
-):
+async def test_save_session_corrupted_data_error(store: ConversationStore, redis_client: Redis):
     session_id = "test_corrupted_data"
     # Invalid non-JSON string into Redis session key
     await redis_client.set(f"session:{session_id}", "invalid_json_data")
@@ -133,9 +131,7 @@ async def test_save_session_corrupted_data_error(
 
 
 @pytest.mark.asyncio
-async def test_get_session_corrupted_data(
-    store: ConversationStore, redis_client: Redis
-):
+async def test_get_session_corrupted_data(store: ConversationStore, redis_client: Redis):
     session_id = "test_get_corrupted"
     await redis_client.set(f"session:{session_id}", "{invalid_json}")
 
@@ -175,9 +171,7 @@ async def test_session_ttl(store: ConversationStore, redis_client: Redis):
     )
 
     ttl_seconds = 300
-    await store.save_session(
-        session_id=session_id, new_session=session_data, ttl=ttl_seconds
-    )
+    await store.save_session(session_id=session_id, new_session=session_data, ttl=ttl_seconds)
 
     remaining_ttl = await redis_client.ttl(f"session:{session_id}")
     assert 0 < remaining_ttl <= ttl_seconds

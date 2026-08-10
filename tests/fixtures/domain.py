@@ -44,9 +44,7 @@ def sale_setup(db_session, shop):
         price=Decimal("100.50"),
         quantity=10,
     ):
-        product = Product(
-            **ProductFactory.as_dict(price=price), shop_id=shop.id, sku="PR-TEST"
-        )
+        product = Product(**ProductFactory.as_dict(price=price), shop_id=shop.id, sku="PR-TEST")
 
         db_session.add(product)
         await db_session.flush()
@@ -72,7 +70,7 @@ def sale_setup(db_session, shop):
 def session():
     return UserSession(
         phone="+254700000000",
-        state=SessionState.SALE,
+        state=SessionState.RECORD_SALE_PRODUCT,
         context=SessionContext(product_name="Sugar"),
     )
 
