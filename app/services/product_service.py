@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.fsm.models import ProductResolution, ProductResolutionStatus
 from app.models.product import Product
 from app.repositories.product_repo import ProductRepository
 from app.schemas.product import ProductCreate, ProductUpdate
@@ -20,9 +21,7 @@ product_repo = ProductRepository()
 class ProductService:
     def generate_sku(self, product_name: str, length: int = 6) -> str:
         prefix = "".join(word[0].upper() for word in product_name.split() if word)
-        suffix = "".join(
-            random.choices(string.ascii_uppercase + string.digits, k=length)
-        )
+        suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
         return f"{prefix}-{suffix}"
 
     async def create_product(self, data: ProductCreate, db: AsyncSession) -> Product:
@@ -49,9 +48,7 @@ class ProductService:
         product = await db.get(Product, product_id)
 
         if not product:
-            raise ResourceNotFoundException(
-                entity_name="Product", identifier=product_id
-            )
+            raise ResourceNotFoundException(entity_name="Product", identifier=product_id)
 
         return product
 
@@ -87,6 +84,27 @@ class ProductService:
         except IntegrityError:
             await db.rollback()
             raise ResourceConflictException(
-                "Product cannot be deleted "
-                "because related inventory or sales records exist."
+                "Product cannot be deleted because related inventory or sales records exist."
             )
+
+    async def find_products_by_fuzzy_name(
+        self, db: AsyncSession, shop_id: UUID, query: str, limit: int = 3
+    ) -> ProductResolution:
+        result = await product_repo.get_products_by_fuzzy_name(
+            shop_id=shop_id, db=db, query=query, limit=limit
+        )
+
+        result_cardinality = len(result)
+
+        if not result:
+            # No acceptable match
+            return ProductResolution(status=ProductResolutionStatus.NOT_FOUND)
+
+        elif result_cardinality == 1:
+            # Exactly one candidate - Confident match
+            product = result[0]
+            return ProductResolution(status=ProductResolutionStatus.EXACT_MATCH, product=product)
+
+        else:
+            # 2–3 candidates - User clarification required
+            return ProductResolution(status=ProductResolutionStatus.AMBIGUOUS, candidates=result)
