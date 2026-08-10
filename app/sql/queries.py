@@ -3,6 +3,7 @@ from enum import StrEnum
 
 class ProductSQL(StrEnum):
     LIST_BY_SHOP = "products/list_by_shop.sql"
+    GET_BY_FUZZY_SEARCH = "products/find_products_by_fuzzy_search"
 
 
 class InventorySQL(StrEnum):
