@@ -25,9 +25,7 @@ class ResourceConflictException(Exception):
 
 
 class InvalidPriceException(Exception):
-    def __init__(
-        self, price: float, message: str = "Product price cannot be negative."
-    ):
+    def __init__(self, price: float, message: str = "Product price cannot be negative."):
         self.price = price
         self.message = f"{message} Provided: KES {price}"
         super().__init__(self.message)
@@ -38,18 +36,14 @@ class InsufficientStockException(Exception):
         self.product_id = product_id
         self.requested = requested
         self.available = available
-        self.message = (
-            f"Cannot deduct {requested} units. Only {available} units available."
-        )
+        self.message = f"Cannot deduct {requested} units. Only {available} units available."
         super().__init__(self.message)
 
 
 class InvalidThresholdException(Exception):
     def __init__(self, threshold: int):
         self.threshold = threshold
-        self.message = (
-            f"Low stock threshold must be greater than or equal to 0. Got: {threshold}"
-        )
+        self.message = f"Low stock threshold must be greater than or equal to 0. Got: {threshold}"
         super().__init__(self.message)
 
 

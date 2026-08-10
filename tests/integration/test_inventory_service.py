@@ -47,13 +47,9 @@ async def test_deduct_stock(client: AsyncClient, db_session: AsyncSession, produ
     db_session.add(inventory)
     await db_session.flush()
 
-    await inventory_service.deduct_stock(
-        product.id, quantity=quantity_to_deduct, db=db_session
-    )
+    await inventory_service.deduct_stock(product.id, quantity=quantity_to_deduct, db=db_session)
 
-    result = await db_session.execute(
-        select(Inventory).where(Inventory.product_id == product.id)
-    )
+    result = await db_session.execute(select(Inventory).where(Inventory.product_id == product.id))
     persisted_inventory = result.scalar_one()
 
     assert persisted_inventory.product_id == product.id
@@ -67,9 +63,7 @@ async def test_deduct_insufficient_stock(
     quantity_to_deduct = 16
 
     with pytest.raises(InsufficientStockException):
-        await inventory_service.deduct_stock(
-            product.id, quantity_to_deduct, db=db_session
-        )
+        await inventory_service.deduct_stock(product.id, quantity_to_deduct, db=db_session)
 
 
 async def test_deduct_stock_alert_threshold(
@@ -91,9 +85,7 @@ async def test_get_stock_api(client: AsyncClient, product, inventory):
     assert data["quantity"] == inventory.quantity
 
 
-async def test_add_stock_api(
-    client: AsyncClient, db_session: AsyncSession, product, inventory
-):
+async def test_add_stock_api(client: AsyncClient, db_session: AsyncSession, product, inventory):
     payload = {"product_id": str(product.id), "quantity": 15}
     original_quantity = inventory.quantity
     response = await client.post("/inventory/add", json=payload)
@@ -102,9 +94,7 @@ async def test_add_stock_api(
     assert data["quantity"] == original_quantity + 15
 
 
-async def test_deduct_stock_api(
-    client: AsyncClient, db_session: AsyncSession, product, inventory
-):
+async def test_deduct_stock_api(client: AsyncClient, db_session: AsyncSession, product, inventory):
     payload = {"product_id": str(product.id), "quantity": 4}
     original_quantity = inventory.quantity
     response = await client.post("/inventory/deduct", json=payload)

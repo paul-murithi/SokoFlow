@@ -43,9 +43,7 @@ async def test_create_shop_duplicate_phone_returns_409(client: AsyncClient):
     assert second_response.status_code == status.HTTP_409_CONFLICT
 
 
-async def test_create_product_invalid_price(
-    client: AsyncClient, db_session: AsyncSession
-):
+async def test_create_product_invalid_price(client: AsyncClient, db_session: AsyncSession):
     shop_id = uuid4()
 
     payload = {**ProductFactory.as_dict(price=-222), "shop_id": str(shop_id)}
@@ -71,9 +69,7 @@ async def test_duplicate_sku_constraint_enforced_at_db_level(
     first_response = await client.post("/products", json=product_payload)
     generated_sku = first_response.json()["sku"]
 
-    duplicate = Product(
-        name="Another Product", price=9.99, sku=generated_sku, shop_id=shop_id
-    )
+    duplicate = Product(name="Another Product", price=9.99, sku=generated_sku, shop_id=shop_id)
     db_session.add(duplicate)
     with pytest.raises(IntegrityError):
         await db_session.commit()

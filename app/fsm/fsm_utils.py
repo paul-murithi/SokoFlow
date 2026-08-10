@@ -36,9 +36,7 @@ def parse_price(raw_text: str) -> Decimal:
     try:
         price = Decimal(cleaned).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     except InvalidOperation:  # pyright: ignore[] # TODO: Log error
-        raise InvalidInputError(
-            "Please enter a valid price, e.g. '150', 'KES 150', or '150/='."
-        )
+        raise InvalidInputError("Please enter a valid price, e.g. '150', 'KES 150', or '150/='.")
 
     if price <= 0:
         raise InvalidInputError("Price must be greater than 0")

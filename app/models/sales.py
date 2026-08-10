@@ -34,12 +34,8 @@ class Sale(Base):
     product_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True), ForeignKey("products.id"), nullable=False
     )
-    quantity: Mapped[int] = mapped_column(
-        Integer, CheckConstraint("quantity > 0"), nullable=False
-    )
-    unit_price: Mapped[Decimal] = mapped_column(
-        Numeric(precision=10, scale=2), nullable=False
-    )
+    quantity: Mapped[int] = mapped_column(Integer, CheckConstraint("quantity > 0"), nullable=False)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(precision=10, scale=2), nullable=False)
     total: Mapped[Decimal] = mapped_column(
         Numeric(precision=10, scale=2),
         Computed("quantity * unit_price", persisted=True),

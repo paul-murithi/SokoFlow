@@ -71,9 +71,7 @@ async def test_save_session_success_uses_idle_state_when_old_session_missing(
 
     with (
         patch("app.fsm.conversation_store.get_update_script", return_value=script),
-        patch(
-            "app.fsm.conversation_store.encode_session", return_value="encoded-session"
-        ),
+        patch("app.fsm.conversation_store.encode_session", return_value="encoded-session"),
     ):
         await store.save_session("abc123", session, ttl=120)
 
@@ -94,9 +92,7 @@ async def test_save_session_success_uses_old_state_when_present(
 
     with (
         patch("app.fsm.conversation_store.get_update_script", return_value=script),
-        patch(
-            "app.fsm.conversation_store.encode_session", return_value="encoded-session"
-        ),
+        patch("app.fsm.conversation_store.encode_session", return_value="encoded-session"),
     ):
         await store.save_session("abc123", session, old_session=idle_session, ttl=45)
 
@@ -112,13 +108,9 @@ async def test_save_session_raises_state_mismatch_error(store, session):  # pyri
 
     with (
         patch("app.fsm.conversation_store.get_update_script", return_value=script),
-        patch(
-            "app.fsm.conversation_store.encode_session", return_value="encoded-session"
-        ),
+        patch("app.fsm.conversation_store.encode_session", return_value="encoded-session"),
     ):
-        with pytest.raises(
-            SessionStateMismatchError, match="Session abc123 changed before save"
-        ):
+        with pytest.raises(SessionStateMismatchError, match="Session abc123 changed before save"):
             await store.save_session("abc123", session)
 
 
@@ -128,25 +120,19 @@ async def test_save_session_raises_corrupted_session_error(store, session):  # p
 
     with (
         patch("app.fsm.conversation_store.get_update_script", return_value=script),
-        patch(
-            "app.fsm.conversation_store.encode_session", return_value="encoded-session"
-        ),
+        patch("app.fsm.conversation_store.encode_session", return_value="encoded-session"),
     ):
         with pytest.raises(CorruptedSessionError, match="Session abc123 was corrupted"):
             await store.save_session("abc123", session)
 
 
 @pytest.mark.asyncio
-async def test_save_session_raises_runtime_error_for_unmapped_lua_response(
-    store, session
-):  # pyright: ignore[]
+async def test_save_session_raises_runtime_error_for_unmapped_lua_response(store, session):  # pyright: ignore[]
     script = AsyncMock(return_value=999)
 
     with (
         patch("app.fsm.conversation_store.get_update_script", return_value=script),
-        patch(
-            "app.fsm.conversation_store.encode_session", return_value="encoded-session"
-        ),
+        patch("app.fsm.conversation_store.encode_session", return_value="encoded-session"),
     ):
         with pytest.raises(RuntimeError, match="Invalid or unmapped Lua response 999"):
             await store.save_session("abc123", session)
@@ -158,9 +144,7 @@ async def test_save_session_propagates_redis_errors(store, session):  # pyright:
 
     with (
         patch("app.fsm.conversation_store.get_update_script", return_value=script),
-        patch(
-            "app.fsm.conversation_store.encode_session", return_value="encoded-session"
-        ),
+        patch("app.fsm.conversation_store.encode_session", return_value="encoded-session"),
     ):
         with pytest.raises(RedisError, match="boom"):
             await store.save_session("abc123", session)

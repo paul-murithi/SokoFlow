@@ -70,9 +70,7 @@ class AddProductFlow(FSMPrimitives):
             ),
         )
 
-    async def handle_confirm(
-        self, session: UserSession, message_text: str
-    ) -> FSMResult:
+    async def handle_confirm(self, session: UserSession, message_text: str) -> FSMResult:
         previous_state = session.state
 
         is_confirmed = parse_confirmation(message_text)

@@ -26,9 +26,7 @@ class ConversationEvents(Base):
         server_default=text("gen_random_uuid()"),
     )
 
-    correlation_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), nullable=False, index=True
-    )
+    correlation_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False, index=True)
 
     phone: Mapped[str] = mapped_column(String(20), nullable=False)
 

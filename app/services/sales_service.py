@@ -50,14 +50,10 @@ class SalesService:
         async with db.begin_nested():
             product = await db.get(Product, product_id)
             if product is None:
-                raise ResourceNotFoundException(
-                    entity_name="Product", identifier=product_id
-                )
+                raise ResourceNotFoundException(entity_name="Product", identifier=product_id)
 
             if product.shop_id != shop_id:
-                raise ResourceConflictException(
-                    "Product does not belong to the specified shop."
-                )
+                raise ResourceConflictException("Product does not belong to the specified shop.")
 
             await inventory_service.deduct_stock(
                 product_id=product_id, quantity=quantity, db=db, commit=False
@@ -82,9 +78,7 @@ class SalesService:
     ) -> dict[str, Any]:  # Improve return type
         day_start, day_end = SalesService._local_day_bounds_to_utc(date_input=date)
 
-        revenue_summary = await self.get_total_revenue_and_count(
-            date=date, shop_id=shop_id, db=db
-        )
+        revenue_summary = await self.get_total_revenue_and_count(date=date, shop_id=shop_id, db=db)
         total_revenue = revenue_summary.revenue
         transaction_count = revenue_summary.transaction_count
 

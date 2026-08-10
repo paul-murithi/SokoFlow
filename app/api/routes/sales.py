@@ -10,9 +10,7 @@ service = SalesService()
 
 
 @router.post("", response_model=SaleResponse, status_code=201)
-async def record_sale(
-    payload: SaleCreate, db: AsyncSession = Depends(get_db)
-) -> SaleResponse:
+async def record_sale(payload: SaleCreate, db: AsyncSession = Depends(get_db)) -> SaleResponse:
     sale = await service.record_sale(
         shop_id=payload.shop_id,
         product_id=payload.product_id,

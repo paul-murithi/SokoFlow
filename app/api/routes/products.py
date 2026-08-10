@@ -20,17 +20,13 @@ async def create_product(
 
 
 @router.get("", response_model=list[ProductResponse])
-async def list_products(
-    shop_id: UUID, db: AsyncSession = Depends(get_db)
-) -> list[ProductResponse]:
+async def list_products(shop_id: UUID, db: AsyncSession = Depends(get_db)) -> list[ProductResponse]:
     products = await service.list_products(shop_id, db)
     return [ProductResponse.model_validate(p) for p in products]
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
-async def get_product(
-    product_id: UUID, db: AsyncSession = Depends(get_db)
-) -> ProductResponse:
+async def get_product(product_id: UUID, db: AsyncSession = Depends(get_db)) -> ProductResponse:
     product = await service.get_product(product_id, db)
     return ProductResponse.model_validate(product)
 

@@ -19,9 +19,7 @@ class Shop(Base):
     phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     name: Mapped[str | None] = mapped_column(Text)
     locale: Mapped[str] = mapped_column(String(10), server_default=text("'en'"))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # relationship
     products = relationship(

@@ -28,9 +28,7 @@ async def test_update_threshold_success(db_session: AsyncSession, inventory):
     original_threshold = inventory.low_stock_threshold
     assert original_threshold == 5  # default server default in schema / factory
 
-    updated = await inventory_service.update_threshold(
-        inventory.product_id, 10, db_session
-    )
+    updated = await inventory_service.update_threshold(inventory.product_id, 10, db_session)
     assert updated.low_stock_threshold == 10
 
     await db_session.refresh(inventory)

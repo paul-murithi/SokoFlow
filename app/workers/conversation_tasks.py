@@ -30,9 +30,7 @@ async def conversation(payload: dict[str, object]) -> str:
     phone_number = inbound_message.sender
 
     # Dedup duplicate
-    if await store.is_duplicate(
-        inbound_message.message_id, ttl=settings.dedup_ttl_seconds
-    ):
+    if await store.is_duplicate(inbound_message.message_id, ttl=settings.dedup_ttl_seconds):
         logger.info("Ignoring duplicate inbound message %s", inbound_message.message_id)
         return "duplicate-ignored"
 
@@ -49,9 +47,7 @@ async def conversation(payload: dict[str, object]) -> str:
     # Process Message
     async with get_worker_db() as db:
         fsm_engine = FSMEngine(db_session=db)
-        result = await fsm_engine.process_message(
-            current_session, inbound_message.message_text
-        )
+        result = await fsm_engine.process_message(current_session, inbound_message.message_text)
 
     # Save message to Session
     await store.save_session(

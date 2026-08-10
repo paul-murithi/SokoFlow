@@ -10,8 +10,6 @@ service = ShopService()
 
 
 @router.post("", status_code=201, response_model=ShopResponse)
-async def create_shop(
-    payload: CreateShop, db: AsyncSession = Depends(get_db)
-) -> ShopResponse:
+async def create_shop(payload: CreateShop, db: AsyncSession = Depends(get_db)) -> ShopResponse:
     shop = await service.create_shop(payload, db)
     return ShopResponse.model_validate(shop)

@@ -16,25 +16,19 @@ class InventoryService:
     ) -> Inventory:
         # TODO: commit defaults to True,
         # for reuse inside the larger multi step transaction later (FSM)
-        inventory = await inventory_repo.add_stock(
-            product_id=product_id, quantity=quantity, db=db
-        )
+        inventory = await inventory_repo.add_stock(product_id=product_id, quantity=quantity, db=db)
         return await self._finalize_inventory(inventory, db, commit)
 
     async def deduct_stock(
         self, product_id: UUID, quantity: int, db: AsyncSession, commit: bool = True
     ) -> tuple[Inventory, bool]:
         result = await db.execute(
-            select(Inventory)
-            .where(Inventory.product_id == product_id)
-            .with_for_update()
+            select(Inventory).where(Inventory.product_id == product_id).with_for_update()
         )
         inventory = result.scalar_one_or_none()
 
         if not inventory:
-            raise ResourceNotFoundException(
-                entity_name="Inventory Product", identifier=product_id
-            )
+            raise ResourceNotFoundException(entity_name="Inventory Product", identifier=product_id)
 
         if self.is_insufficient_stock(
             quantity_to_deduct=quantity, current_quantity=inventory.quantity
@@ -59,14 +53,10 @@ class InventoryService:
     async def get_stock(self, product_id: UUID, db: AsyncSession) -> Inventory:
         inventory = await inventory_repo.get_by_product_id(product_id=product_id, db=db)
         if not inventory:
-            raise ResourceNotFoundException(
-                entity_name="Inventory Product", identifier=product_id
-            )
+            raise ResourceNotFoundException(entity_name="Inventory Product", identifier=product_id)
         return inventory
 
-    def is_insufficient_stock(
-        self, quantity_to_deduct: int, current_quantity: int
-    ) -> bool:
+    def is_insufficient_stock(self, quantity_to_deduct: int, current_quantity: int) -> bool:
         return quantity_to_deduct > current_quantity
 
     def should_send_low_stock_alert(self, old_is_low: bool, new_is_low: bool) -> bool:

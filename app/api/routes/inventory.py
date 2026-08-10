@@ -18,9 +18,7 @@ service = InventoryService()
 
 
 @router.get("/{product_id}", response_model=InventoryResponse)
-async def get_stock(
-    product_id: UUID, db: AsyncSession = Depends(get_db)
-) -> InventoryResponse:
+async def get_stock(product_id: UUID, db: AsyncSession = Depends(get_db)) -> InventoryResponse:
     inventory = await service.get_stock(product_id, db)
     return InventoryResponse.model_validate(inventory)
 
@@ -52,7 +50,5 @@ async def update_threshold(
     payload: UpdateThresholdRequest,
     db: AsyncSession = Depends(get_db),
 ) -> InventoryResponse:
-    inventory = await service.update_threshold(
-        product_id, payload.low_stock_threshold, db
-    )
+    inventory = await service.update_threshold(product_id, payload.low_stock_threshold, db)
     return InventoryResponse.model_validate(inventory)
