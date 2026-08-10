@@ -13,9 +13,7 @@ WEBHOOK_URL = "http://localhost:8000/webhook/whatsapp"
 STATIC_PHONE_NUMBER = "254712345678"
 
 
-def construct_payload(
-    phone_number: str, message: str, message_id: str
-) -> WhatsAppWebhook:
+def construct_payload(phone_number: str, message: str, message_id: str) -> WhatsAppWebhook:
     payload = {
         "object": "whatsapp_business_account",
         "entry": [
@@ -105,7 +103,6 @@ def send_payload(payload: WhatsAppWebhook) -> None:
     try:
         response = httpx.post(WEBHOOK_URL, json=payload.model_dump(by_alias=True))
         response.raise_for_status()
-        print(f"Webhook: {response.json()}")
     except httpx.HTTPStatusError as exc:
         print(f"Error response {exc.response.status_code} while requesting {exc}.")
     except httpx.HTTPError as exc:
