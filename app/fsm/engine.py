@@ -22,7 +22,7 @@ class FSMEngine(FSMPrimitives):
         self.db = db_session
         self.intent_resolver = IntentResolver()
         self.add_product_flow = AddProductFlow(db_session=db_session)
-        self.record_sale_flow = RecordSaleFlow()
+        self.record_sale_flow = RecordSaleFlow(db_session=db_session)
         self.stock_lookup_flow = StockLookupFlow()
         self._handler_map: dict[
             SessionState, Callable[[UserSession, str], Awaitable[FSMResult]]
@@ -33,11 +33,16 @@ class FSMEngine(FSMPrimitives):
             SessionState.ADD_PRODUCT_PRICE: self.add_product_flow.handle_price,
             SessionState.ADD_PRODUCT_QTY: self.add_product_flow.handle_qty,
             SessionState.CONFIRM_ADD_PRODUCT: self.add_product_flow.handle_confirm,
+            # Record Sale Flow
+            SessionState.RECORD_SALE_PRODUCT: self.record_sale_flow.handle_sale_product_name,
+            SessionState.RECORD_SALE_PRODUCT_SELECTION: (
+                self.record_sale_flow.handle_sale_product_selection
+            ),
+            SessionState.RECORD_SALE_QTY: self.record_sale_flow.handle_sale_product_qty,
+            SessionState.CONFIRM_SALE: self.record_sale_flow.handle_confirm_sale_product,
         }
 
-    async def process_message(
-        self, session: UserSession, message_text: str
-    ) -> FSMResult:
+    async def process_message(self, session: UserSession, message_text: str) -> FSMResult:
         """Processes an incoming message against the current session state."""
         previous_state = session.state
         normalized_text = message_text.strip().lower()
@@ -83,14 +88,18 @@ class FSMEngine(FSMPrimitives):
         intent = self.intent_resolver.resolve(message_text)
 
         if intent is Intent.UNKNOWN:
-            raise InvalidInputError("Type 'add product' to begin.")
-
-        if intent is Intent.RECORD_SALE:
-            raise InvalidInputError(
-                "Sales flow is not available yet. Type 'add product' to begin."
-            )
+            raise InvalidInputError("Type 'add product' or 'record sale' to begin.")
 
         session.context.flow_started_at = datetime.now(timezone.utc)
+
+        if intent is Intent.RECORD_SALE:
+            self._transition(session, SessionState.RECORD_SALE_PRODUCT)
+            return self._build_result(
+                previous_state=previous_state,
+                session=session,
+                reply_text="Great, let's record a sale. What product was sold?",
+            )
+
         self._transition(session, SessionState.ADD_PRODUCT_NAME)
 
         return self._build_result(
