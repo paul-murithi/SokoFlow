@@ -8,21 +8,47 @@ from pydantic import BaseModel, Field
 
 
 class SessionState(StrEnum):
+    # Record Product Flow
     IDLE = "IDLE"
     START_ADD_PRODUCT = "START_ADD_PRODUCT"
     ADD_PRODUCT_NAME = "ADD_PRODUCT_NAME"
     ADD_PRODUCT_PRICE = "ADD_PRODUCT_PRICE"
     ADD_PRODUCT_QTY = "ADD_PRODUCT_QTY"
     CONFIRM_ADD_PRODUCT = "CONFIRM_ADD_PRODUCT"
-    SALE = "SALE"
-    WAIT_PRODUCT = "RECORD_SALE_PRODUCT"
-    WAIT_QTY = "RECORD_SALE_QTY"
-    CONFIRM = "CONFIRM_SALE"
-    DONE = "DONE"
+
+    # Record Sale Flow
+    RECORD_SALE_PRODUCT = "RECORD_SALE_PRODUCT"
+    RECORD_SALE_PRODUCT_SELECTION = "RECORD_SALE_PRODUCT_SELECTION"  # Awaiting user option
+    RECORD_SALE_QTY = "RECORD_SALE_QTY"
+    CONFIRM_SALE = "CONFIRM_SALE"
+
+
+class ScoredProductMatch(BaseModel):
+    """Pairs a product with its fuzzy match score to evaluate thresholds."""
+
+    id: UUID
+    shop_id: UUID
+    name: str
+    sku: str
+    price: Decimal
+    similarity_score: float = Field(..., ge=0.0, le=1.0)
+
+
+class ProductResolutionStatus(StrEnum):
+    NOT_FOUND = "NOT_FOUND"
+    EXACT_MATCH = "EXACT_MATCH"
+    AMBIGUOUS = "AMBIGUOUS"
+
+
+class ProductResolution(BaseModel):
+    status: ProductResolutionStatus
+    product: ScoredProductMatch | None = None
+    candidates: list[ScoredProductMatch] = []
 
 
 class SessionContext(BaseModel):
     shop_id: Optional[UUID] = None
+    product_id: Optional[UUID] = None
     product_name: Optional[str] = None
     product_price: Optional[Decimal] = None
     product_qty: Optional[int] = None
@@ -30,6 +56,7 @@ class SessionContext(BaseModel):
     history: List[SessionState] = Field(default_factory=list)
     error_count: int = 0
     last_activity: Optional[datetime] = None
+    product_candidates: list[ScoredProductMatch] = []
 
 
 class UserSession(BaseModel):
@@ -94,9 +121,7 @@ class InboundMessagePayload(BaseModel):
     message_id: str
 
     @classmethod
-    def from_whatsapp_webhook(
-        cls, webhook: WhatsAppWebhook
-    ) -> "InboundMessagePayload | None":
+    def from_whatsapp_webhook(cls, webhook: WhatsAppWebhook) -> "InboundMessagePayload | None":
         """Transforms a raw Meta webhook into a flat internal contract."""
         try:
             message = webhook.entry[0].changes[0].value.messages[0]
