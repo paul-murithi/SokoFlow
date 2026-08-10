@@ -50,9 +50,7 @@ async def test_invalid_input_keeps_state_and_increments_errors() -> None:
     assert result.previous_state == SessionState.ADD_PRODUCT_PRICE
     assert result.new_state == SessionState.ADD_PRODUCT_PRICE
     assert result.context.error_count == 1
-    assert result.reply_text == (
-        "Please enter a valid price, e.g. '150', 'KES 150', or '150/='."
-    )
+    assert result.reply_text == ("Please enter a valid price, e.g. '150', 'KES 150', or '150/='.")
 
 
 @pytest.mark.asyncio
@@ -131,9 +129,74 @@ async def test_idle_state_uses_intent_resolver_for_add_product_flow() -> None:
         context=SessionContext(),
     )
 
-    result = await engine.process_message(
-        session, "can you help me add a new product please"
-    )
+    result = await engine.process_message(session, "can you help me add a new product please")
 
     assert result.new_state == SessionState.ADD_PRODUCT_NAME
     assert result.reply_text == "Great, let's add a product. What is the product name?"
+
+
+@pytest.mark.asyncio
+async def test_idle_state_uses_intent_resolver_for_record_sale_flow() -> None:
+    engine = FSMEngine()
+    session = UserSession(
+        phone="+254700000105",
+        state=SessionState.IDLE,
+        context=SessionContext(),
+    )
+
+    result = await engine.process_message(session, "record sale")
+
+    assert result.new_state == SessionState.RECORD_SALE_PRODUCT
+    assert result.reply_text == "Great, let's record a sale. What product was sold?"
+
+
+@pytest.mark.asyncio
+async def test_record_sale_confirmation_cancel_resets_flow() -> None:
+    engine = FSMEngine()
+    session = UserSession(
+        phone="+254700000106",
+        state=SessionState.CONFIRM_SALE,
+        context=SessionContext(
+            product_name="Sugar",
+            product_price="120.00",
+            product_qty=2,
+            history=[SessionState.IDLE],
+        ),
+    )
+
+    result = await engine.process_message(session, "no")
+
+    assert result.previous_state == SessionState.CONFIRM_SALE
+    assert result.new_state == SessionState.IDLE
+    assert result.reply_text == "No problem. I cancelled the sale flow."
+    assert result.context.product_name is None
+    assert result.context.product_price is None
+    assert result.context.product_qty is None
+
+
+@pytest.mark.asyncio
+async def test_record_sale_invalid_selection_stays_in_selection_state() -> None:
+    engine = FSMEngine()
+    session = UserSession(
+        phone="+254700000107",
+        state=SessionState.RECORD_SALE_PRODUCT_SELECTION,
+        context=SessionContext(
+            product_candidates=[
+                {
+                    "id": "11111111-1111-1111-1111-111111111111",
+                    "shop_id": "22222222-2222-2222-2222-222222222222",
+                    "name": "Sugar",
+                    "sku": "SUG-001",
+                    "price": "120.00",
+                    "similarity_score": 0.98,
+                }
+            ]
+        ),
+    )
+
+    result = await engine.process_message(session, "9")
+
+    assert result.previous_state == SessionState.RECORD_SALE_PRODUCT_SELECTION
+    assert result.new_state == SessionState.RECORD_SALE_PRODUCT_SELECTION
+    assert result.context.error_count == 1
+    assert result.reply_text == "Invalid Choice"
