@@ -23,7 +23,7 @@ class FSMEngine(FSMPrimitives):
         self.intent_resolver = IntentResolver()
         self.add_product_flow = AddProductFlow(db_session=db_session)
         self.record_sale_flow = RecordSaleFlow(db_session=db_session)
-        self.stock_lookup_flow = StockLookupFlow()
+        self.stock_lookup_flow = StockLookupFlow(db_session=db_session)
         self._handler_map: dict[
             SessionState, Callable[[UserSession, str], Awaitable[FSMResult]]
         ] = {
