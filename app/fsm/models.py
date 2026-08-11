@@ -22,6 +22,10 @@ class SessionState(StrEnum):
     RECORD_SALE_QTY = "RECORD_SALE_QTY"
     CONFIRM_SALE = "CONFIRM_SALE"
 
+    # Check Stock flow
+    CHECK_STOCK_PRODUCT = "CHECK_STOCK_PRODUCT"
+    CHECK_STOCK_PRODUCT_SELECTION = "CHECK_STOCK_PRODUCT_SELECTION"
+
 
 class ScoredProductMatch(BaseModel):
     """Pairs a product with its fuzzy match score to evaluate thresholds."""
