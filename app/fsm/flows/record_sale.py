@@ -1,6 +1,3 @@
-from uuid import UUID
-
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_worker_db
@@ -8,12 +5,10 @@ from app.fsm.fsm_utils import parse_confirmation, parse_quantity
 from app.fsm.models import (
     FSMResult,
     ProductResolutionStatus,
-    ScoredProductMatch,
     SessionState,
     UserSession,
 )
 from app.fsm.primitives import FSMPrimitives
-from app.models import Shop
 from app.services.product_service import ProductService
 from app.services.sales_service import SalesService
 from app.utils.errors import (
@@ -91,46 +86,6 @@ class RecordSaleFlow(FSMPrimitives):
                 return self._build_result(
                     previous_state=session.state, session=session, reply_text=reply_text
                 )
-
-    def _format_product_choices(
-        self,
-        candidates: list[ScoredProductMatch],
-    ) -> str:
-        lines = [
-            "Which product did you mean?",
-            "",
-        ]
-
-        for index, product in enumerate(candidates, start=1):
-            lines.append(f"{index}. {product.name} — {product.price}")
-
-        lines.extend(["", f"Reply with a number from 1 to {len(candidates)}."])
-
-        return "\n".join(lines)
-
-    def _resolve_product_choice(self, session: UserSession, message: str) -> ScoredProductMatch:
-        try:
-            choice = int(message.strip())
-        except (ValueError, TypeError):
-            raise InvalidInputError("Choice must be a number")
-
-        candidates = session.context.product_candidates
-
-        if choice < 1 or choice > len(candidates):
-            raise InvalidInputError("Invalid Choice")
-
-        selected_product = candidates[choice - 1]
-        return selected_product
-
-    async def get_shop_id(self, db: AsyncSession, sender: str) -> UUID:
-        stmt = select(Shop).where(Shop.phone == sender)
-        result = await db.execute(stmt)
-        shop = result.scalar_one_or_none()
-
-        if shop is None:
-            raise InvalidInputError("I couldn't find your shop profile. Please contact support.")
-
-        return shop.id
 
     async def handle_sale_product_selection(self, session: UserSession, message: str) -> FSMResult:
         previous_state = session.state

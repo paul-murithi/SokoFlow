@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from uuid import UUID
 
-from app.fsm.models import FSMResult, SessionContext, SessionState, UserSession
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.fsm.models import FSMResult, ScoredProductMatch, SessionContext, SessionState, UserSession
+from app.models import Shop
+from app.utils.errors import InvalidInputError
 
 
 class FSMPrimitives:
@@ -33,3 +39,43 @@ class FSMPrimitives:
             context=session.context.model_copy(deep=True),
             reply_text=reply_text,
         )
+
+    def _resolve_product_choice(self, session: UserSession, message: str) -> ScoredProductMatch:
+        try:
+            choice = int(message.strip())
+        except (ValueError, TypeError):
+            raise InvalidInputError("Choice must be a number")
+
+        candidates = session.context.product_candidates
+
+        if choice < 1 or choice > len(candidates):
+            raise InvalidInputError("Invalid Choice")
+
+        selected_product = candidates[choice - 1]
+        return selected_product
+
+    def _format_product_choices(
+        self,
+        candidates: list[ScoredProductMatch],
+    ) -> str:
+        lines = [
+            "Which product did you mean?",
+            "",
+        ]
+
+        for index, product in enumerate(candidates, start=1):
+            lines.append(f"{index}. {product.name} — {product.price}")
+
+        lines.extend(["", f"Reply with a number from 1 to {len(candidates)}."])
+
+        return "\n".join(lines)
+
+    async def get_shop_id(self, db: AsyncSession, sender: str) -> UUID:
+        stmt = select(Shop).where(Shop.phone == sender)
+        result = await db.execute(stmt)
+        shop = result.scalar_one_or_none()
+
+        if shop is None:
+            raise InvalidInputError("I couldn't find your shop profile. Please contact support.")
+
+        return shop.id
