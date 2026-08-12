@@ -19,7 +19,8 @@ class ProductRepository:
         self, *, shop_id: UUID, db: AsyncSession, query: str, limit: int
     ) -> list[ScoredProductMatch]:
         query = query.strip().lower()
-        stmt = select(Product).from_statement(text(load_sql(ProductSQL.GET_BY_FUZZY_SEARCH)))
-        result = await db.scalars(stmt, {"shop_id": shop_id, "search_term": query, "limit": limit})
 
-        return [ScoredProductMatch.model_validate(product) for product in result.all()]
+        stmt = text(load_sql(ProductSQL.GET_BY_FUZZY_SEARCH))
+        result = await db.execute(stmt, {"shop_id": shop_id, "search_term": query, "limit": limit})
+
+        return [ScoredProductMatch.model_validate(dict(row)) for row in result.mappings()]
