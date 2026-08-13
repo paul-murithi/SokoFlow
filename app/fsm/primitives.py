@@ -44,6 +44,12 @@ class FSMPrimitives:
         )
 
     def _resolve_product_choice(self, session: UserSession, message: str) -> ScoredProductMatch:
+        candidates = session.context.product_candidates
+        if not candidates:
+            raise InvalidInputError(
+                "Session lost choice context. Please start again by typing 'sale'."
+            )
+
         try:
             choice = int(message.strip())
         except (ValueError, TypeError):

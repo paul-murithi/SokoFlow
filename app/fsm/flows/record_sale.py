@@ -9,6 +9,7 @@ from app.fsm.models import (
     UserSession,
 )
 from app.fsm.primitives import FSMPrimitives
+from app.services.inventory_service import InventoryService
 from app.services.product_service import ProductService
 from app.services.sales_service import SalesService
 from app.utils.errors import (
@@ -25,10 +26,12 @@ class RecordSaleFlow(FSMPrimitives):
         db_session: AsyncSession | None = None,
         product_service: ProductService | None = None,
         sales_service: SalesService | None = None,
+        inventory_service: InventoryService | None = None,
     ) -> None:
         self.db_session = db_session
         self.product_service = product_service or ProductService()
         self.sales_service = sales_service or SalesService()
+        self.inventory_service = inventory_service or InventoryService()
 
     async def handle_sale_product_name(self, session: UserSession, message: str) -> FSMResult:
         previous_state = session.state
@@ -69,11 +72,10 @@ class RecordSaleFlow(FSMPrimitives):
                 )
             case ProductResolutionStatus.NOT_FOUND:
                 # No close match
-                reply_text = """
-                    I couldn't find a matching product.
-                    Would you like to add it first?
-                    Type 'add product' to add it, or try another product name.
-                """
+                reply_text = (
+                    "I couldn't find a matching product.\n"
+                    "Please check the name and try again, or type *'cancel'* to stop."
+                )
                 return self._build_result(
                     previous_state=previous_state, session=session, reply_text=reply_text
                 )
@@ -86,6 +88,7 @@ class RecordSaleFlow(FSMPrimitives):
         session.context.product_price = selected_product.price
 
         self._transition(session=session, new_state=SessionState.RECORD_SALE_QTY)
+        session.context.product_candidates = []
         return self._build_result(
             previous_state=previous_state,
             session=session,
@@ -97,23 +100,37 @@ class RecordSaleFlow(FSMPrimitives):
         if quantity <= 0:
             raise InvalidInputError("Please enter a quantity greater than 0.")
 
-        session.context.product_qty = quantity
         previous_state = session.state
         product_name = session.context.product_name
         product_price = session.context.product_price
+        product_id = session.context.product_id
 
-        if product_name is None or product_price is None:
+        if not product_id or not product_name or product_price is None:
+            raise CorruptedSessionError(session.phone)
+
+        async with self._get_db_session(db_session=self.db_session) as db:
+            available_stock = await self.inventory_service.get_stock(product_id=product_id, db=db)
+
+        # Sufficient stock check
+        if quantity > available_stock.quantity:
             raise InvalidInputError(
-                "I lost some product details. Type 'record sale' to start again."
+                f"Insufficient stock! Only *{available_stock}* units of {product_name} remaining. "
+                f"Please enter a valid quantity."
             )
+
+        session.context.product_qty = quantity
+        total_amount = product_price * quantity
 
         self._transition(session=session, new_state=SessionState.CONFIRM_SALE)
         return self._build_result(
             previous_state=previous_state,
             session=session,
             reply_text=(
-                f"Please confirm: {product_name} at KES {product_price:.2f}, "
-                f"units sold {session.context.product_qty}. Reply Yes or No."
+                f"Confirm Sale:\n"
+                f"- Product: {product_name}\n"
+                f"- Quantity: {quantity}\n"
+                f"- Total: KES {total_amount:.2f}\n\n"
+                f"Reply *yes* to record or *no* to cancel."
             ),
         )
 
