@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.fsm.models import ProductResolution, ProductResolutionStatus
 from app.models.product import Product
 from app.repositories.product_repo import ProductRepository
@@ -88,23 +89,36 @@ class ProductService:
             )
 
     async def find_products_by_fuzzy_name(
-        self, db: AsyncSession, shop_id: UUID, query: str, limit: int = 3
+        self,
+        db: AsyncSession,
+        shop_id: UUID,
+        query: str,
+        limit: int = 3,
     ) -> ProductResolution:
-        result = await product_repo.get_products_by_fuzzy_name(
-            shop_id=shop_id, db=db, query=query, limit=limit
+        """
+        Determines whether the best candidate is confident enough,
+        to select automatically from acceptable candidates.
+        """
+        CONFIDENT_MATCH_THRESHOLD = settings.confident_match_threshold
+        results = await product_repo.get_products_by_fuzzy_name(
+            shop_id=shop_id,
+            db=db,
+            query=query,
+            limit=limit,
         )
 
-        result_cardinality = len(result)
-
-        if not result:
-            # No acceptable match
+        if not results:
             return ProductResolution(status=ProductResolutionStatus.NOT_FOUND)
 
-        elif result_cardinality == 1:
-            # Exactly one candidate - Confident match
-            product = result[0]
-            return ProductResolution(status=ProductResolutionStatus.EXACT_MATCH, product=product)
+        best = results[0]
 
-        else:
-            # 2–3 candidates - User clarification required
-            return ProductResolution(status=ProductResolutionStatus.AMBIGUOUS, candidates=result)
+        if best.similarity_score >= CONFIDENT_MATCH_THRESHOLD:
+            return ProductResolution(
+                status=ProductResolutionStatus.EXACT_MATCH,
+                product=best,
+            )
+
+        return ProductResolution(
+            status=ProductResolutionStatus.AMBIGUOUS,
+            candidates=results,
+        )

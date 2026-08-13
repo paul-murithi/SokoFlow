@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     session_ttl_seconds: int = 1800
     dedup_ttl_seconds: int = 60
     max_fsm_errors: int = 3
+    product_match_threshold: float = 0.55
+    confident_match_threshold: float = 0.75
 
     # Celery
     celery_task_max_retries: int | None = None

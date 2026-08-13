@@ -7,6 +7,6 @@ SELECT
     similarity(name_lower, :search_term) AS similarity_score
 FROM products
 WHERE shop_id = :shop_id
-  AND name_lower % :search_term
+  AND similarity(name_lower, :search_term) >= :min_threshold
 ORDER BY similarity(name_lower, :search_term) DESC
 LIMIT :limit;
