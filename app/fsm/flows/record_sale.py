@@ -26,30 +26,21 @@ class RecordSaleFlow(FSMPrimitives):
         product_service: ProductService | None = None,
         sales_service: SalesService | None = None,
     ) -> None:
-        self.db = db_session
+        self.db_session = db_session
         self.product_service = product_service or ProductService()
         self.sales_service = sales_service or SalesService()
 
     async def handle_sale_product_name(self, session: UserSession, message: str) -> FSMResult:
         previous_state = session.state
 
-        if self.db is not None:
-            shop_id = await self.get_shop_id(self.db, session.phone)
+        async with self._get_db_session(db_session=self.db_session) as db:
+            shop_id = await self.get_shop_id(db=db, sender=session.phone)
             session.context.shop_id = shop_id
             matches = await self.product_service.find_products_by_fuzzy_name(
-                db=self.db,
+                db=db,
                 shop_id=shop_id,
                 query=message,
             )
-        else:
-            async with get_worker_db() as db_session:
-                shop_id = await self.get_shop_id(db_session, session.phone)
-                session.context.shop_id = shop_id
-                matches = await self.product_service.find_products_by_fuzzy_name(
-                    db=db_session,
-                    shop_id=shop_id,
-                    query=message,
-                )
 
         match matches.status:
             case ProductResolutionStatus.EXACT_MATCH:
@@ -72,7 +63,7 @@ class RecordSaleFlow(FSMPrimitives):
                 self._transition(session, SessionState.RECORD_SALE_PRODUCT_SELECTION)
 
                 return self._build_result(
-                    previous_state=session.state,
+                    previous_state=previous_state,
                     session=session,
                     reply_text=self._format_product_choices(matches.candidates),
                 )
@@ -84,7 +75,7 @@ class RecordSaleFlow(FSMPrimitives):
                     Type 'add product' to add it, or try another product name.
                 """
                 return self._build_result(
-                    previous_state=session.state, session=session, reply_text=reply_text
+                    previous_state=previous_state, session=session, reply_text=reply_text
                 )
 
     async def handle_sale_product_selection(self, session: UserSession, message: str) -> FSMResult:
@@ -168,8 +159,8 @@ class RecordSaleFlow(FSMPrimitives):
         )
 
     async def _persist_product_db(self, session: UserSession) -> None:
-        if self.db is not None:
-            await self._persist_product_db_with_session(session=session, db=self.db)
+        if self.db_session is not None:
+            await self._persist_product_db_with_session(session=session, db=self.db_session)
             return
 
         async with get_worker_db() as db_session:

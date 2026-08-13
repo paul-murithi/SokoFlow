@@ -62,7 +62,7 @@ async def test_handle_stock_name_uses_fallback_db_session_when_not_injected(monk
     async def fake_worker_db():
         yield db_session
 
-    monkeypatch.setattr("app.fsm.flows.stock_lookup.get_worker_db", fake_worker_db)
+    monkeypatch.setattr("app.fsm.primitives.get_worker_db", fake_worker_db)
 
     flow = StockLookupFlow(
         db_session=None,

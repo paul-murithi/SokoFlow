@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import get_worker_db
 from app.fsm.models import FSMResult, ScoredProductMatch, SessionContext, SessionState, UserSession
 from app.models import Shop
 from app.utils.errors import InvalidInputError
@@ -79,3 +82,14 @@ class FSMPrimitives:
             raise InvalidInputError("I couldn't find your shop profile. Please contact support.")
 
         return shop.id
+
+    @asynccontextmanager  # pyright: ignore[reportDeprecated]
+    async def _get_db_session(
+        self, db_session: AsyncSession | None = None
+    ) -> AsyncIterator[AsyncSession]:
+        if db_session is not None:
+            yield db_session
+            return
+
+        async with get_worker_db() as db_session:
+            yield db_session

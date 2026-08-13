@@ -1,9 +1,5 @@
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_worker_db
 from app.fsm.fsm_utils import parse_product_name
 from app.fsm.models import (
     FSMResult,
@@ -33,7 +29,7 @@ class StockLookupFlow(FSMPrimitives):
         product_name = parse_product_name(message)
         previous_state = session.state
 
-        async with self._get_db_session() as db:
+        async with self._get_db_session(db_session=self.db_session) as db:
             shop_id = await self.get_shop_id(db=db, sender=session.phone)
             session.context.shop_id = shop_id
 
@@ -127,11 +123,11 @@ class StockLookupFlow(FSMPrimitives):
         )
         return inventory.quantity, product.name
 
-    @asynccontextmanager  # pyright: ignore[reportDeprecated]
-    async def _get_db_session(self) -> AsyncIterator[AsyncSession]:
-        if self.db_session is not None:
-            yield self.db_session
-            return
+    # @asynccontextmanager  # pyright: ignore[reportDeprecated]
+    # async def _get_db_session(self) -> AsyncIterator[AsyncSession]:
+    #     if self.db_session is not None:
+    #         yield self.db_session
+    #         return
 
-        async with get_worker_db() as db_session:
-            yield db_session
+    #     async with get_worker_db() as db_session:
+    #         yield db_session
