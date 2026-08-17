@@ -28,10 +28,15 @@ async def conversation(payload: dict[str, object]) -> str:
     store = get_conversation_store()
     inbound_message = InboundMessagePayload.model_validate(payload)
     phone_number = inbound_message.sender
+    correlation_id = inbound_message.correlation_id
 
     # Dedup duplicate
     if await store.is_duplicate(inbound_message.message_id, ttl=settings.dedup_ttl_seconds):
-        logger.info("Ignoring duplicate inbound message %s", inbound_message.message_id)
+        logger.info(
+            "Ignoring duplicate inbound message %s [correlation_id=%s]",
+            inbound_message.message_id,
+            correlation_id,
+        )
         return "duplicate-ignored"
 
     old_session = await store.get_session(phone_number)
