@@ -1,3 +1,4 @@
+import hmac
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -5,12 +6,13 @@ from uuid import uuid4
 
 import httpx
 
+from app.core.config import settings
 from app.fsm.models import WhatsAppWebhook
 
 RECEIVER_HOST = "localhost"
 RECEIVER_PORT = 8080
 WEBHOOK_URL = "http://localhost:8000/webhook/whatsapp"
-STATIC_PHONE_NUMBER = "254712345678"
+STATIC_PHONE_NUMBER = settings.whatsapp_phone_number_id or "254712345678"
 
 
 def construct_payload(phone_number: str, message: str, message_id: str) -> WhatsAppWebhook:
@@ -99,10 +101,35 @@ def start_receiver_server() -> ThreadingHTTPServer:
     return server
 
 
-def send_payload(payload: WhatsAppWebhook) -> None:
+def send_payload(
+    payload: WhatsAppWebhook,
+    app_secret: str | None = None,
+    invalid_signature: bool = False,
+    custom_message_id: str | None = None,
+) -> None:
+    if app_secret is None:
+        app_secret = settings.whatsapp_app_secret or "test-app-secret-for-hmac"
+
+    if custom_message_id and payload.entry:
+        payload.entry[0].changes[0].value.messages[0].id = custom_message_id
+
+    raw_body = json.dumps(payload.model_dump(by_alias=True)).encode("utf-8")
+
+    if invalid_signature:
+        sig_header = "sha256=invalid_hmac_signature_hex"
+    else:
+        sig_hex = hmac.new(app_secret.encode("utf-8"), raw_body, "sha256").hexdigest()
+        sig_header = f"sha256={sig_hex}"
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Hub-Signature-256": sig_header,
+    }
+
     try:
-        response = httpx.post(WEBHOOK_URL, json=payload.model_dump(by_alias=True))
+        response = httpx.post(WEBHOOK_URL, content=raw_body, headers=headers)
         response.raise_for_status()
+        print(f"[Simulator] Webhook accepted message (HTTP {response.status_code})")
     except httpx.HTTPStatusError as exc:
         print(f"Error response {exc.response.status_code} while requesting {exc}.")
     except httpx.HTTPError as exc:
