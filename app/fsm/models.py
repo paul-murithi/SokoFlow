@@ -123,9 +123,12 @@ class InboundMessagePayload(BaseModel):
     sender: str
     message_text: str
     message_id: str
+    correlation_id: str | None = None
 
     @classmethod
-    def from_whatsapp_webhook(cls, webhook: WhatsAppWebhook) -> "InboundMessagePayload | None":
+    def from_whatsapp_webhook(
+        cls, webhook: WhatsAppWebhook, correlation_id: str | None = None
+    ) -> "InboundMessagePayload | None":
         """Transforms a raw Meta webhook into a flat internal contract."""
         try:
             message = webhook.entry[0].changes[0].value.messages[0]
@@ -133,6 +136,7 @@ class InboundMessagePayload(BaseModel):
                 sender=message.from_,
                 message_text=message.text.body if message.text else "",
                 message_id=message.id,
+                correlation_id=correlation_id,
             )
         except (IndexError, AttributeError, TypeError):
             # TODO: Handle non-message payloads (like status webhooks)
