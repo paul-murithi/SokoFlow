@@ -1,4 +1,3 @@
-from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -9,6 +8,7 @@ from app.schemas.inventory import (
     AddStockRequest,
     DeductStockRequest,
     InventoryResponse,
+    StockDeductionResult,
     UpdateThresholdRequest,
 )
 from app.services.inventory_service import InventoryService
@@ -34,14 +34,9 @@ async def add_stock(
 @router.post("/deduct")
 async def deduct_stock(
     payload: DeductStockRequest, db: AsyncSession = Depends(get_db)
-) -> dict[str, Any]:  # TODO: Improve function return type annotation
-    inventory, low_stock_triggered = await service.deduct_stock(
-        payload.product_id, payload.quantity, db
-    )
-    return {
-        "inventory": InventoryResponse.model_validate(inventory),
-        "low_stock_triggered": low_stock_triggered,
-    }
+) -> StockDeductionResult:
+    result = await service.deduct_stock(payload.product_id, payload.quantity, db)
+    return StockDeductionResult.model_validate(result)
 
 
 @router.patch("/{product_id}/threshold", response_model=InventoryResponse)

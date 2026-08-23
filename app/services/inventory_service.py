@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.inventory import Inventory
 from app.repositories.inventory_repo import InventoryRepository
+from app.schemas.inventory import StockDeductionResult
 from app.utils.errors import InsufficientStockException, ResourceNotFoundException
 
 inventory_repo = InventoryRepository()
@@ -21,7 +22,7 @@ class InventoryService:
 
     async def deduct_stock(
         self, product_id: UUID, quantity: int, db: AsyncSession, commit: bool = True
-    ) -> tuple[Inventory, bool]:
+    ) -> StockDeductionResult:
         result = await db.execute(
             select(Inventory).where(Inventory.product_id == product_id).with_for_update()
         )
@@ -48,7 +49,9 @@ class InventoryService:
 
         low_stock_triggered = self.should_send_low_stock_alert(old_is_low, new_is_low)
 
-        return inventory, low_stock_triggered
+        return StockDeductionResult(
+            remaining_stock=inventory.quantity, low_stock_triggered=low_stock_triggered
+        )
 
     async def get_stock(self, product_id: UUID, db: AsyncSession) -> Inventory:
         inventory = await inventory_repo.get_by_product_id(product_id=product_id, db=db)

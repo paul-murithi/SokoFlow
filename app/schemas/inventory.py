@@ -29,3 +29,8 @@ class InventoryResponse(BaseModel):
     low_stock_threshold: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class StockDeductionResult(BaseModel):
+    remaining_stock: int
+    low_stock_triggered: bool

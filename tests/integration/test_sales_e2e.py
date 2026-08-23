@@ -21,12 +21,13 @@ async def test_record_sale(db_session: AsyncSession, sale_setup):
     quantity_to_deduct = 10
 
     # Create sale
-    sale = await sales_service.record_sale(
+    sale_result = await sales_service.record_sale(
         shop_id=shop.id,
         product_id=product.id,
         quantity=quantity_to_deduct,
         db=db_session,
     )
+    sale = sale_result.sale
 
     expected_total = quantity_to_deduct * sale.unit_price
 

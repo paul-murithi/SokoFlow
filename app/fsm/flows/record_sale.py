@@ -9,6 +9,7 @@ from app.fsm.models import (
     UserSession,
 )
 from app.fsm.primitives import FSMPrimitives
+from app.schemas.sales import SaleResult
 from app.services.inventory_service import InventoryService
 from app.services.product_service import ProductService
 from app.services.sales_service import SalesService
@@ -147,17 +148,15 @@ class RecordSaleFlow(FSMPrimitives):
                 reply_text="No problem. I cancelled the sale flow.",
             )
 
+        product_id = session.context.product_id
         product_name = session.context.product_name
-        product_price = session.context.product_price
         units_sold = session.context.product_qty
 
-        if product_name is None or product_price is None or units_sold is None:
-            raise InvalidInputError(
-                "I lost some product details. Type 'record sale' to start again."
-            )
+        if not product_id or not product_name or units_sold is None:
+            raise CorruptedSessionError(session.phone)
 
         try:
-            await self._persist_product_db(session)
+            sale_result = await self._record_sale_transaction(session)
         except (
             InvalidInputError,
             ResourceConflictException,
@@ -167,37 +166,39 @@ class RecordSaleFlow(FSMPrimitives):
 
         self._transition(session, SessionState.IDLE)
         self._clear_context_preserving_history(session)
-        return self._build_result(
-            previous_state=previous_state,
-            session=session,
-            reply_text=(
-                f"Sale recorded: {product_name} at KES {product_price:.2f} units sold {units_sold}."
-            ),
+
+        reply_text = (
+            f"Sale recorded: *{product_name}* ({units_sold} units).\n"
+            f"Stock remaining: *{sale_result.remaining_stock}* units."
         )
 
-    async def _persist_product_db(self, session: UserSession) -> None:
+        if sale_result.low_stock_triggered:
+            reply_text += f"\n*Low Stock Alert*: Only {sale_result.remaining_stock} units left."
+
+        return self._build_result(
+            previous_state=previous_state, session=session, reply_text=reply_text
+        )
+
+    async def _record_sale_transaction(self, session: UserSession) -> SaleResult:
         if self.db_session is not None:
-            await self._persist_product_db_with_session(session=session, db=self.db_session)
-            return
+            return await self._persist_sale_db_with_session(session=session, db=self.db_session)
 
         async with get_worker_db() as db_session:
-            await self._persist_product_db_with_session(session=session, db=db_session)
+            return await self._persist_sale_db_with_session(session=session, db=db_session)
 
-    async def _persist_product_db_with_session(
+    async def _persist_sale_db_with_session(
         self,
         session: UserSession,
         db: AsyncSession,
-    ) -> None:
+    ) -> SaleResult:
         shop_id = session.context.shop_id
         product_id = session.context.product_id
         units_sold = session.context.product_qty
 
         if shop_id is None or product_id is None or units_sold is None:
-            raise InvalidInputError(
-                "I lost some product details. Type 'record sale' to start again."
-            )
+            raise CorruptedSessionError(session.phone)
 
-        await self.sales_service.record_sale(
+        return await self.sales_service.record_sale(
             shop_id=shop_id,
             product_id=product_id,
             quantity=units_sold,

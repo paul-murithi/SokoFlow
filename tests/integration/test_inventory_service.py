@@ -70,11 +70,11 @@ async def test_deduct_stock_alert_threshold(
     client: AsyncClient, db_session: AsyncSession, product, inventory
 ):
     quantity_to_deduct = 6
-    updated_inventory, low_stock_triggered = await inventory_service.deduct_stock(
+    result = await inventory_service.deduct_stock(
         product_id=product.id, quantity=quantity_to_deduct, db=db_session
     )
-    assert updated_inventory.quantity == 4
-    assert low_stock_triggered is True
+    assert result.remaining_stock == 4
+    assert result.low_stock_triggered is True
 
 
 async def test_get_stock_api(client: AsyncClient, product, inventory):
@@ -101,7 +101,7 @@ async def test_deduct_stock_api(client: AsyncClient, db_session: AsyncSession, p
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
 
-    assert data["inventory"]["quantity"] == original_quantity - 4
+    assert data["remaining_stock"] == original_quantity - 4
     assert data["low_stock_triggered"] is False
 
 

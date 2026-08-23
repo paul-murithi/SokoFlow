@@ -40,3 +40,9 @@ class DailySummaryResponse(BaseModel):
     transaction_count: int
     top_product_by_units: TopProductUnitsInfo | None = None
     top_product_by_revenue: TopProductRevenueInfo | None = None
+
+
+class SaleResult(BaseModel):
+    sale: SaleResponse
+    remaining_stock: int
+    low_stock_triggered: bool

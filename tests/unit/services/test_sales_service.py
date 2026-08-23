@@ -17,13 +17,14 @@ async def test_record_sale_with_recorded_by(db_session: AsyncSession, sale_setup
     product = data["product"]
     shop = data["shop"]
 
-    sale = await sales_service.record_sale(
+    result = await sales_service.record_sale(
         shop_id=shop.id,
         product_id=product.id,
         quantity=5,
         db=db_session,
         recorded_by="Alice",
     )
+    sale = result.sale
 
     assert sale.product_id == product.id
     assert sale.quantity == 5

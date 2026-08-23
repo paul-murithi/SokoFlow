@@ -9,6 +9,7 @@ from app.dto.sales import LowStockProductDTO, RevenueSummary
 from app.models.product import Product
 from app.models.sales import Sale
 from app.repositories.sales_repo import SalesRepository
+from app.schemas.sales import SaleResponse, SaleResult
 from app.services.inventory_service import InventoryService
 from app.utils.errors import ResourceConflictException, ResourceNotFoundException
 
@@ -46,7 +47,7 @@ class SalesService:
         quantity: int,
         db: AsyncSession,
         recorded_by: str = "System",
-    ) -> Sale:
+    ) -> SaleResult:
         async with db.begin_nested():
             product = await db.get(Product, product_id)
             if product is None:
@@ -55,7 +56,7 @@ class SalesService:
             if product.shop_id != shop_id:
                 raise ResourceConflictException("Product does not belong to the specified shop.")
 
-            await inventory_service.deduct_stock(
+            stock_result = await inventory_service.deduct_stock(
                 product_id=product_id, quantity=quantity, db=db, commit=False
             )
 
@@ -71,7 +72,11 @@ class SalesService:
             await db.flush()
             await db.refresh(sale)
 
-            return sale
+            return SaleResult(
+                sale=SaleResponse.model_validate(sale),
+                remaining_stock=stock_result.remaining_stock,
+                low_stock_triggered=stock_result.low_stock_triggered,
+            )
 
     async def get_daily_summary(
         self, shop_id: UUID, date: date | datetime, db: AsyncSession

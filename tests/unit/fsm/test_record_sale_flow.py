@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import AsyncMock
 from uuid import uuid4
@@ -13,6 +14,7 @@ from app.fsm.models import (
     SessionState,
     UserSession,
 )
+from app.schemas.sales import SaleResponse, SaleResult
 from app.utils.errors import InvalidInputError
 
 
@@ -27,10 +29,24 @@ class StubProductService:
 
 
 class StubSalesService:
-    def __init__(self) -> None:
+    def __init__(self, sale_result=None) -> None:
         self.calls: list[dict[str, object]] = []
+        self.sale_result = sale_result or SaleResult(
+            sale=SaleResponse(
+                id=uuid4(),
+                shop_id=uuid4(),
+                product_id=uuid4(),
+                quantity=1,
+                unit_price=Decimal("100.00"),
+                total=Decimal("100.00"),
+                recorded_by="System",
+                created_at=datetime.now(timezone.utc),
+            ),
+            remaining_stock=10,
+            low_stock_triggered=False,
+        )
 
-    async def record_sale(self, *, shop_id, product_id, quantity, db) -> None:
+    async def record_sale(self, *, shop_id, product_id, quantity, db) -> SaleResult:
         self.calls.append(
             {
                 "shop_id": shop_id,
@@ -39,6 +55,7 @@ class StubSalesService:
                 "db": db,
             }
         )
+        return self.sale_result
 
 
 @pytest.mark.asyncio
@@ -223,7 +240,8 @@ async def test_handle_confirm_sale_product_persists_sale_record() -> None:
     result = await flow.handle_confirm_sale_product(session, "yes")
 
     assert result.new_state == SessionState.IDLE
-    assert result.reply_text == ("Sale recorded: Sugar at KES 120.00 units sold 3.")
+    assert result.reply_text == ("Sale recorded: *Sugar* (3 units).\nStock remaining: *10* units.")
+
     assert len(sales_service.calls) == 1
     assert sales_service.calls[0]["shop_id"] == shop_id
     assert sales_service.calls[0]["product_id"] == product_id
