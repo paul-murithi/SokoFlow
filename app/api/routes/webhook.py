@@ -80,9 +80,16 @@ async def webhook(
     try:
         redis = get_redis()
         store = ConversationStore(redis)
-        if await store.is_duplicate(payload.message_id, ttl=settings.dedup_ttl_seconds):
+
+        is_duplicate = await store.is_duplicate(
+            payload.message_id,
+            ttl=settings.dedup_ttl_seconds,
+        )
+
+        if is_duplicate:
             logger.info("Duplicate webhook message_id %s ignored", payload.message_id)
             return WebhookResponse(status="ignored", message="Duplicate message ignored")
+
     except Exception as exc:
         logger.error("Redis deduplication error: %s", exc, exc_info=True)
         return JSONResponse(
