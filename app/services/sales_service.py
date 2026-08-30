@@ -1,5 +1,4 @@
 from datetime import date, datetime, time, timedelta
-from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -9,7 +8,13 @@ from app.dto.sales import LowStockProductDTO, RevenueSummary
 from app.models.product import Product
 from app.models.sales import Sale
 from app.repositories.sales_repo import SalesRepository
-from app.schemas.sales import SaleResponse, SaleResult
+from app.schemas.sales import (
+    DailySummaryResponse,
+    SaleResponse,
+    SaleResult,
+    TopProductRevenueInfo,
+    TopProductUnitsInfo,
+)
 from app.services.inventory_service import InventoryService
 from app.utils.errors import ResourceConflictException, ResourceNotFoundException
 
@@ -80,7 +85,7 @@ class SalesService:
 
     async def get_daily_summary(
         self, shop_id: UUID, date: date | datetime, db: AsyncSession
-    ) -> dict[str, Any]:  # Improve return type
+    ) -> DailySummaryResponse:
         day_start, day_end = SalesService._local_day_bounds_to_utc(date_input=date)
 
         revenue_summary = await self.get_total_revenue_and_count(date=date, shop_id=shop_id, db=db)
@@ -91,22 +96,20 @@ class SalesService:
             shop_id=shop_id, day_start=day_start, day_end=day_end, db=db
         )
 
-        return {
-            "total_revenue": total_revenue,
-            "transaction_count": transaction_count,
-            "top_product_by_units": {
-                "product_id": top_units.product_id,
-                "units_sold": top_units.units_sold,
-            }
+        return DailySummaryResponse(
+            total_revenue=total_revenue,
+            transaction_count=transaction_count,
+            top_product_by_units=TopProductUnitsInfo(
+                product_id=top_units.product_id, units_sold=top_units.units_sold
+            )
             if top_units
             else None,
-            "top_product_by_revenue": {
-                "product_id": top_revenue.product_id,
-                "revenue": top_revenue.revenue,
-            }
+            top_product_by_revenue=TopProductRevenueInfo(
+                product_id=top_revenue.product_id, revenue=top_revenue.revenue
+            )
             if top_revenue
             else None,
-        }
+        )
 
     async def get_total_revenue_and_count(
         self, date: date | datetime, shop_id: UUID, db: AsyncSession

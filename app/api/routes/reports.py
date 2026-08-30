@@ -20,5 +20,4 @@ async def get_daily_report(
 ) -> DailySummaryResponse:
     target_date = date_ if date_ else date.today()
 
-    summary = await service.get_daily_report_data(shop_id, target_date, db)
-    return DailySummaryResponse.model_validate(summary)
+    return await service.get_daily_report_data(shop_id, target_date, db)

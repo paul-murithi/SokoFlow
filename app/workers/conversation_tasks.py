@@ -28,7 +28,7 @@ async def conversation(payload: dict[str, object]) -> str:
     store = get_conversation_store()
     inbound_message = InboundMessagePayload.model_validate(payload)
     phone_number = inbound_message.sender
-    correlation_id = inbound_message.correlation_id # pyright: ignore[]
+    # correlation_id = inbound_message.correlation_id # pyright: ignore[]
 
     old_session = await store.get_session(phone_number)
     if old_session is None:
