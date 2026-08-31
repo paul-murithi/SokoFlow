@@ -17,6 +17,11 @@ class MessageSender(Protocol):
     def send_text(self, recipient: str, message_text: str) -> None:
         """Deliver a text message to the configured channel."""
 
+    def send_document(
+        self, recipient: str, document_bytes: bytes, filename: str, caption: str | None = None
+    ) -> None:
+        """Deliver a document message to the configured channel."""
+
 
 @dataclass(frozen=True, slots=True)
 class MockMessageSender:
@@ -33,6 +38,23 @@ class MockMessageSender:
         except httpx.HTTPError as exc:
             raise MessageDeliveryError(str(exc)) from exc
 
+    def send_document(
+        self, recipient: str, document_bytes: bytes, filename: str, caption: str | None = None
+    ) -> None:
+        try:
+            httpx.post(
+                self.endpoint_url,
+                json={
+                    "recipient": recipient,
+                    "filename": filename,
+                    "caption": caption,
+                    "document_length": len(document_bytes),
+                },
+                timeout=self.timeout_seconds,
+            ).raise_for_status()
+        except httpx.HTTPError as exc:
+            raise MessageDeliveryError(str(exc)) from exc
+
 
 @dataclass(frozen=True, slots=True)
 class WhatsAppMessageSender:
@@ -43,6 +65,12 @@ class WhatsAppMessageSender:
     def send_text(self, recipient: str, message_text: str) -> None:
         # TODO: Implement the real WhatsApp delivery call when the production
         # channel contract is finalized.
+        return None
+
+    def send_document(
+        self, recipient: str, document_bytes: bytes, filename: str, caption: str | None = None
+    ) -> None:
+        # TODO: Implement WhatsApp document media message delivery.
         return None
 
 
