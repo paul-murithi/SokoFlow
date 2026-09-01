@@ -6,11 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.inventory import Inventory
 from app.repositories.inventory_repo import InventoryRepository
 from app.schemas.inventory import StockDeductionResult
-from app.services.low_stock_notification_service import LowStockNotificationService
 from app.utils.errors import InsufficientStockException, ResourceNotFoundException
 
 inventory_repo = InventoryRepository()
-low_stock_notification_service = LowStockNotificationService()
 
 
 class InventoryService:
