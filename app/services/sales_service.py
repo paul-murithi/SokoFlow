@@ -80,7 +80,7 @@ class SalesService:
             return SaleResult(
                 sale=SaleResponse.model_validate(sale),
                 remaining_stock=stock_result.remaining_stock,
-                low_stock_triggered=stock_result.low_stock_triggered,
+                entered_low_stock=stock_result.entered_low_stock,
             )
 
     async def get_daily_summary(
@@ -95,6 +95,7 @@ class SalesService:
         top_units, top_revenue = await sales_repo.get_top_moving_products(
             shop_id=shop_id, day_start=day_start, day_end=day_end, db=db
         )
+        low_stock_products = await self.get_products_with_low_stock(shop_id=shop_id, db=db)
 
         return DailySummaryResponse(
             total_revenue=total_revenue,
@@ -109,6 +110,7 @@ class SalesService:
             )
             if top_revenue
             else None,
+            products_with_low_stock=low_stock_products,
         )
 
     async def get_total_revenue_and_count(

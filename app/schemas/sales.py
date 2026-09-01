@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.dto.sales import LowStockProductDTO
+
 
 class SaleCreate(BaseModel):
     shop_id: UUID
@@ -40,9 +42,10 @@ class DailySummaryResponse(BaseModel):
     transaction_count: int
     top_product_by_units: TopProductUnitsInfo | None = None
     top_product_by_revenue: TopProductRevenueInfo | None = None
+    products_with_low_stock: list[LowStockProductDTO] = Field(default_factory=list)
 
 
 class SaleResult(BaseModel):
     sale: SaleResponse
     remaining_stock: int
-    low_stock_triggered: bool
+    entered_low_stock: bool

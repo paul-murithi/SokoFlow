@@ -33,4 +33,4 @@ class InventoryResponse(BaseModel):
 
 class StockDeductionResult(BaseModel):
     remaining_stock: int
-    low_stock_triggered: bool
+    entered_low_stock: bool

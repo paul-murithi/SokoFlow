@@ -172,7 +172,7 @@ class RecordSaleFlow(FSMPrimitives):
             f"Stock remaining: *{sale_result.remaining_stock}* units."
         )
 
-        if sale_result.low_stock_triggered:
+        if sale_result.entered_low_stock:
             reply_text += f"\n*Low Stock Alert*: Only {sale_result.remaining_stock} units left."
 
         return self._build_result(
