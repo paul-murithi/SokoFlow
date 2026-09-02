@@ -74,7 +74,7 @@ async def test_deduct_stock_alert_threshold(
         product_id=product.id, quantity=quantity_to_deduct, db=db_session
     )
     assert result.remaining_stock == 4
-    assert result.low_stock_triggered is True
+    assert result.entered_low_stock is True
 
 
 async def test_get_stock_api(client: AsyncClient, product, inventory):
@@ -102,7 +102,7 @@ async def test_deduct_stock_api(client: AsyncClient, db_session: AsyncSession, p
     data = response.json()
 
     assert data["remaining_stock"] == original_quantity - 4
-    assert data["low_stock_triggered"] is False
+    assert data["entered_low_stock"] is False
 
 
 async def test_update_threshold_api(client: AsyncClient, product, inventory):

@@ -43,7 +43,7 @@ class StubSalesService:
                 created_at=datetime.now(timezone.utc),
             ),
             remaining_stock=10,
-            low_stock_triggered=False,
+            entered_low_stock=False,
         )
 
     async def record_sale(self, *, shop_id, product_id, quantity, db) -> SaleResult:
