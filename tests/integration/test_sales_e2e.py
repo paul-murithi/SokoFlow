@@ -83,8 +83,10 @@ async def test_daily_report_api(client: AsyncClient, sale_setup):
     report_data = report_response.json()
     assert Decimal(report_data["total_revenue"]) == Decimal("100.00")
     assert report_data["transaction_count"] == 2
-    assert report_data["top_product_by_units"]["product_id"] == str(product.id)
-    assert report_data["top_product_by_units"]["units_sold"] == 5
+    assert len(report_data["top_products_by_units"]) == 1
+    assert report_data["top_products_by_units"][0]["product_id"] == str(product.id)
+    assert report_data["top_products_by_units"][0]["name"] == product.name
+    assert report_data["top_products_by_units"][0]["units_sold"] == 5
 
 
 async def test_get_products_with_low_stock(db_session: AsyncSession, shop):

@@ -41,7 +41,7 @@ class SalesRepository:
 
     async def get_top_moving_products(
         self, shop_id: UUID, day_start: datetime, day_end: datetime, db: AsyncSession
-    ) -> tuple[TopProductByUnits | None, TopProductByRevenue | None]:
+    ) -> tuple[list[TopProductByUnits], list[TopProductByRevenue]]:
         params = {
             "shop_id": shop_id,
             "day_start": day_start,
@@ -52,14 +52,12 @@ class SalesRepository:
         top_revenue_stmt = text(load_sql(SalesSQL.GET_TOP_MOVING_PRODUCTS_BY_REVENUE))
 
         units_result = (await db.execute(top_units_stmt, params)).mappings()
-        top_unit_row = units_result.first()
+        top_unit_rows = units_result.all()
 
         revenue_result = (await db.execute(top_revenue_stmt, params)).mappings()
-        top_revenue_row = revenue_result.first()
+        top_revenue_rows = revenue_result.all()
 
-        top_unit = TopProductByUnits.from_row(top_unit_row) if top_unit_row else None
-        top_revenue_product = (
-            TopProductByRevenue.from_row(top_revenue_row) if top_revenue_row else None
-        )
+        top_units = [TopProductByUnits.from_row(row) for row in top_unit_rows]
+        top_revenue_products = [TopProductByRevenue.from_row(row) for row in top_revenue_rows]
 
-        return top_unit, top_revenue_product
+        return top_units, top_revenue_products

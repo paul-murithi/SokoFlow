@@ -92,7 +92,7 @@ class SalesService:
         total_revenue = revenue_summary.revenue
         transaction_count = revenue_summary.transaction_count
 
-        top_units, top_revenue = await sales_repo.get_top_moving_products(
+        top_units, top_revenue_products = await sales_repo.get_top_moving_products(
             shop_id=shop_id, day_start=day_start, day_end=day_end, db=db
         )
         low_stock_products = await self.get_products_with_low_stock(shop_id=shop_id, db=db)
@@ -100,16 +100,18 @@ class SalesService:
         return DailySummaryResponse(
             total_revenue=total_revenue,
             transaction_count=transaction_count,
-            top_product_by_units=TopProductUnitsInfo(
-                product_id=top_units.product_id, units_sold=top_units.units_sold
-            )
-            if top_units
-            else None,
-            top_product_by_revenue=TopProductRevenueInfo(
-                product_id=top_revenue.product_id, revenue=top_revenue.revenue
-            )
-            if top_revenue
-            else None,
+            top_products_by_units=[
+                TopProductUnitsInfo(
+                    product_id=item.product_id, name=item.name, units_sold=item.units_sold
+                )
+                for item in top_units
+            ],
+            top_products_by_revenue=[
+                TopProductRevenueInfo(
+                    product_id=item.product_id, name=item.name, revenue=item.revenue
+                )
+                for item in top_revenue_products
+            ],
             products_with_low_stock=low_stock_products,
         )
 

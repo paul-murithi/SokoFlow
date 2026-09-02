@@ -29,19 +29,21 @@ class SaleResponse(BaseModel):
 
 class TopProductUnitsInfo(BaseModel):
     product_id: UUID
+    name: str
     units_sold: int
 
 
 class TopProductRevenueInfo(BaseModel):
     product_id: UUID
+    name: str
     revenue: Decimal
 
 
 class DailySummaryResponse(BaseModel):
     total_revenue: Decimal
     transaction_count: int
-    top_product_by_units: TopProductUnitsInfo | None = None
-    top_product_by_revenue: TopProductRevenueInfo | None = None
+    top_products_by_units: list[TopProductUnitsInfo] = Field(default_factory=list)
+    top_products_by_revenue: list[TopProductRevenueInfo] = Field(default_factory=list)
     products_with_low_stock: list[LowStockProductDTO] = Field(default_factory=list)
 
 

@@ -9,29 +9,23 @@ from sqlalchemy.engine import RowMapping
 @dataclass(frozen=True)
 class TopProductByUnits:
     product_id: UUID
+    name: str
     units_sold: int
 
     @classmethod
     def from_row(cls, row: RowMapping) -> Self:
-        return cls(product_id=row.product_id, units_sold=row.units_sold)
+        return cls(product_id=row.product_id, name=row.name, units_sold=row.units_sold)
 
 
 @dataclass(frozen=True)
 class TopProductByRevenue:
     product_id: UUID
+    name: str
     revenue: Decimal
 
     @classmethod
     def from_row(cls, row: RowMapping) -> Self:
-        return cls(product_id=row.product_id, revenue=row.revenue)
-
-
-@dataclass
-class SalesSummary:
-    total_revenue: float
-    transaction_count: int
-    top_product_by_units: TopProductByUnits | None
-    top_product_by_revenue: TopProductByRevenue | None
+        return cls(product_id=row.product_id, name=row.name, revenue=row.revenue)
 
 
 @dataclass(frozen=True)
