@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import IntEnum, StrEnum
 from typing import List, Optional
@@ -8,8 +8,10 @@ from pydantic import BaseModel, Field
 
 
 class SessionState(StrEnum):
-    # Record Product Flow
+    # IDLE
     IDLE = "IDLE"
+
+    # Record Product Flow
     START_ADD_PRODUCT = "START_ADD_PRODUCT"
     ADD_PRODUCT_NAME = "ADD_PRODUCT_NAME"
     ADD_PRODUCT_PRICE = "ADD_PRODUCT_PRICE"
@@ -25,6 +27,9 @@ class SessionState(StrEnum):
     # Check Stock flow
     CHECK_STOCK_PRODUCT = "CHECK_STOCK_PRODUCT"
     CHECK_STOCK_PRODUCT_SELECTION = "CHECK_STOCK_PRODUCT_SELECTION"
+
+    # Daily Report Flow
+    REPORT_PENDING = "REPORT_PENDING"
 
 
 class ScoredProductMatch(BaseModel):
@@ -117,6 +122,7 @@ class Intent(StrEnum):
     UNKNOWN = "UNKNOWN"
     ADD_PRODUCT = "ADD_PRODUCT"
     RECORD_SALE = "RECORD_SALE"
+    GENERATE_REPORT = "GENERATE_REPORT"
 
 
 class InboundMessagePayload(BaseModel):
@@ -142,6 +148,12 @@ class InboundMessagePayload(BaseModel):
             # TODO: Handle non-message payloads (like status webhooks)
             # TODO: logging
             return None
+
+
+class ReportPayload(BaseModel):
+    shop_id: UUID
+    recipient: str
+    date_str: date | None = None
 
 
 class FSMResult(BaseModel):
