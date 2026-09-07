@@ -24,6 +24,14 @@ class IntentResolver:
         r"\b(daily report|sales report|summary report)\b",
     )
 
+    _CHECK_STOCK_PATTERNS: tuple[str, ...] = (
+        r"\bcheck\s+stock\b",
+        r"\bstock\s+lookup\b",
+        r"\b(check|view|lookup|query|search|find|count|how\s+many|show|nataka|nipe)\b.*\b(stock|inventory|quantity|left|remaining|items)\b",
+        r"\b(stock|inventory|quantity|remaining)\b.*\b(check|view|lookup|query|search|find|count|how\s+many|show|nataka|nipe)\b",
+        r"\b(stock|inventory)\b",
+    )
+
     def resolve(self, text: str) -> Intent:
         normalized = " ".join(text.lower().strip().split())
 
@@ -38,6 +46,9 @@ class IntentResolver:
 
         if self._matches_any(normalized, self._GENERATE_REPORT_PATTERNS):
             return Intent.GENERATE_REPORT
+
+        if self._matches_any(normalized, self._CHECK_STOCK_PATTERNS):
+            return Intent.CHECK_STOCK
 
         return Intent.UNKNOWN
 

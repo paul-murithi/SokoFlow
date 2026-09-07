@@ -39,51 +39,51 @@ class StockLookupFlow(FSMPrimitives):
                 query=product_name,
             )
 
-        match matches.status:
-            case ProductResolutionStatus.NOT_FOUND:
-                session.context.product_candidates = []
-                return self._build_result(
-                    previous_state=previous_state,
-                    session=session,
-                    reply_text="I could not find a product in the inventory with that name.",
-                )
-            case ProductResolutionStatus.AMBIGUOUS:
-                candidates = matches.candidates
-                if not candidates:
-                    raise CorruptedSessionError(session.phone)
+            match matches.status:
+                case ProductResolutionStatus.NOT_FOUND:
+                    session.context.product_candidates = []
+                    return self._build_result(
+                        previous_state=previous_state,
+                        session=session,
+                        reply_text="I could not find a product in the inventory with that name.",
+                    )
+                case ProductResolutionStatus.AMBIGUOUS:
+                    candidates = matches.candidates
+                    if not candidates:
+                        raise CorruptedSessionError(session.phone)
 
-                session.context.product_candidates = candidates
+                    session.context.product_candidates = candidates
 
-                reply_message = self._format_product_choices(candidates)
-                self._transition(
-                    session=session,
-                    new_state=SessionState.CHECK_STOCK_PRODUCT_SELECTION,
-                )
-                return self._build_result(
-                    previous_state=previous_state,
-                    session=session,
-                    reply_text=reply_message,
-                )
+                    reply_message = self._format_product_choices(candidates)
+                    self._transition(
+                        session=session,
+                        new_state=SessionState.CHECK_STOCK_PRODUCT_SELECTION,
+                    )
+                    return self._build_result(
+                        previous_state=previous_state,
+                        session=session,
+                        reply_text=reply_message,
+                    )
 
-            case ProductResolutionStatus.EXACT_MATCH:
-                if matches.product is None:
-                    raise CorruptedSessionError(session.phone)
+                case ProductResolutionStatus.EXACT_MATCH:
+                    if matches.product is None:
+                        raise CorruptedSessionError(session.phone)
 
-                quantity, product_name = await self._get_inventory(
-                    db=db,
-                    phone=session.phone,
-                    product=matches.product,
-                )
-                self._transition(
-                    session=session,
-                    new_state=SessionState.IDLE,
-                )
-                self._clear_context_preserving_history(session)
-                return self._build_result(
-                    previous_state=previous_state,
-                    session=session,
-                    reply_text=f"Remaining stock for {product_name}: {quantity} units",
-                )
+                    quantity, found_name = await self._get_inventory(
+                        db=db,
+                        phone=session.phone,
+                        product=matches.product,
+                    )
+                    self._transition(
+                        session=session,
+                        new_state=SessionState.IDLE,
+                    )
+                    self._clear_context_preserving_history(session)
+                    return self._build_result(
+                        previous_state=previous_state,
+                        session=session,
+                        reply_text=f"Remaining stock for {found_name}: {quantity} units",
+                    )
 
     async def handle_stock_product_selection(self, session: UserSession, message: str) -> FSMResult:
         previous_state = session.state
@@ -93,7 +93,7 @@ class StockLookupFlow(FSMPrimitives):
         session.context.product_name = selected_product.name
         session.context.product_price = selected_product.price
 
-        async with self._get_db_session() as db:
+        async with self._get_db_session(db_session=self.db_session) as db:
             quantity, product_name = await self._get_inventory(
                 db=db,
                 phone=session.phone,
@@ -122,12 +122,3 @@ class StockLookupFlow(FSMPrimitives):
             db=db,
         )
         return inventory.quantity, product.name
-
-    # @asynccontextmanager  # pyright: ignore[reportDeprecated]
-    # async def _get_db_session(self) -> AsyncIterator[AsyncSession]:
-    #     if self.db_session is not None:
-    #         yield self.db_session
-    #         return
-
-    #     async with get_worker_db() as db_session:
-    #         yield db_session

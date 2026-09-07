@@ -151,6 +151,21 @@ async def test_idle_state_uses_intent_resolver_for_record_sale_flow() -> None:
 
 
 @pytest.mark.asyncio
+async def test_idle_state_uses_intent_resolver_for_check_stock_flow() -> None:
+    engine = FSMEngine()
+    session = UserSession(
+        phone="+254700000108",
+        state=SessionState.IDLE,
+        context=SessionContext(),
+    )
+
+    result = await engine.process_message(session, "check stock")
+
+    assert result.new_state == SessionState.CHECK_STOCK_PRODUCT
+    assert result.reply_text == "Sure, let's check stock. Which product would you like to lookup?"
+
+
+@pytest.mark.asyncio
 async def test_record_sale_confirmation_cancel_resets_flow() -> None:
     engine = FSMEngine()
     session = UserSession(

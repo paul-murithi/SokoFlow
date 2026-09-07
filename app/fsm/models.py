@@ -123,6 +123,7 @@ class Intent(StrEnum):
     ADD_PRODUCT = "ADD_PRODUCT"
     RECORD_SALE = "RECORD_SALE"
     GENERATE_REPORT = "GENERATE_REPORT"
+    CHECK_STOCK = "CHECK_STOCK"
 
 
 class InboundMessagePayload(BaseModel):

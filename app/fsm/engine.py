@@ -40,6 +40,11 @@ class FSMEngine(FSMPrimitives):
             ),
             SessionState.RECORD_SALE_QTY: self.record_sale_flow.handle_sale_product_qty,
             SessionState.CONFIRM_SALE: self.record_sale_flow.handle_confirm_sale_product,
+            # Stock Lookup Flow
+            SessionState.CHECK_STOCK_PRODUCT: self.stock_lookup_flow.handle_stock_name,
+            SessionState.CHECK_STOCK_PRODUCT_SELECTION: (
+                self.stock_lookup_flow.handle_stock_product_selection
+            ),
             # Daily Report Flow
             SessionState.REPORT_PENDING: self._handle_idle,
         }
@@ -90,7 +95,7 @@ class FSMEngine(FSMPrimitives):
         intent = self.intent_resolver.resolve(message_text)
 
         if intent is Intent.UNKNOWN:
-            raise InvalidInputError("Type 'add product' or 'record sale' to begin.")
+            raise InvalidInputError("Type 'add product', 'record sale', or 'check stock' to begin.")
 
         session.context.flow_started_at = datetime.now(timezone.utc)
 
@@ -100,6 +105,14 @@ class FSMEngine(FSMPrimitives):
                 previous_state=previous_state,
                 session=session,
                 reply_text="Great, let's record a sale. What product was sold?",
+            )
+
+        if intent is Intent.CHECK_STOCK:
+            self._transition(session, SessionState.CHECK_STOCK_PRODUCT)
+            return self._build_result(
+                previous_state=previous_state,
+                session=session,
+                reply_text="Sure, let's check stock. Which product would you like to lookup?",
             )
 
         if intent is Intent.GENERATE_REPORT:
