@@ -46,11 +46,15 @@ async def webhook(
     x_hub_signature_256: str | None = Header(None, alias="X-Hub-Signature-256"),
 ) -> WebhookResponse | JSONResponse:
     start_time = time.perf_counter()
+    correlation_id = request.headers.get(settings.correlation_id_header) or str(uuid4())
 
     raw_body = await request.body()
 
     if not verify_hmac_signature(raw_body, x_hub_signature_256, settings.whatsapp_app_secret):
-        logger.warning("Invalid or missing HMAC signature on webhook request")
+        logger.warning(
+            "Invalid or missing HMAC signature on webhook request [correlation_id=%s]",
+            correlation_id,
+        )
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "Invalid or missing HMAC signature"},
@@ -59,19 +63,24 @@ async def webhook(
     try:
         request_payload = WhatsAppWebhook.model_validate_json(raw_body)
     except Exception as exc:
-        logger.warning("Malformed webhook payload: %s", exc)
+        logger.warning(
+            "Malformed webhook payload: %s [correlation_id=%s]",
+            exc,
+            correlation_id,
+        )
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"detail": "Malformed webhook payload"},
         )
 
-    correlation_id = request.headers.get(settings.correlation_id_header) or str(uuid4())
-
     payload = InboundMessagePayload.from_whatsapp_webhook(
         request_payload, correlation_id=correlation_id
     )
     if not payload:
-        logger.warning("Webhook payload missing message event structure")
+        logger.warning(
+            "Webhook payload missing message event structure [correlation_id=%s]",
+            correlation_id,
+        )
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"detail": "Missing required message fields in payload"},

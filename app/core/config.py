@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
+    # Chaos Testing
+    chaos_enabled: bool = False
+    chaos_probability: float = 0.05
+
 
 # Singleton
 settings = Settings()

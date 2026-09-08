@@ -29,6 +29,7 @@ ENV/
 htmlcov/
 coverage.xml
 .tox/
+chaos_reports/
 
 # ── MyPy ─────────────────────────────────────────────────────────
 .mypy_cache/
