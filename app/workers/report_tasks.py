@@ -1,5 +1,6 @@
 import logging
 from datetime import date
+from typing import Any
 from uuid import UUID
 
 from app.core.database import get_worker_db
@@ -7,6 +8,7 @@ from app.fsm.models import ReportPayload
 from app.schemas.sales import DailySummaryResponse
 from app.services.pdf_service import PDFReportService
 from app.services.report_service import ReportService
+from app.utils.idempotency import idempotent_task
 from app.workers.async_runtime import run
 from app.workers.message_sender import MessageDeliveryError, build_message_sender
 from celery_app.celery import celery
@@ -17,7 +19,8 @@ pdf_service = PDFReportService()
 MESSAGE_SENDER = build_message_sender()
 
 
-@celery.task
+@celery.task(autoretry_for=(Exception,), max_retries=5, retry_backoff=True)
+@idempotent_task()
 def report_task(payload: dict[str, object]) -> None:
     """Celery task to generate a daily report PDF asynchronously and deliver it as a
     document message."""
@@ -30,6 +33,13 @@ def report_task(payload: dict[str, object]) -> None:
         f"Triggered report_task for shop_id={shop_id}, recipient={recipient}, date={target_date}"
     )
     return run(process_report(shop_id, recipient, target_date))
+
+
+@celery.task(autoretry_for=(Exception,), max_retries=5, retry_backoff=True)
+@idempotent_task()
+def generate_daily_report(payload: dict[str, Any]) -> None:
+    """Celery task alias for generate_daily_report with idempotency protection."""
+    report_task(payload)
 
 
 async def process_report(shop_id: UUID, recipient: str, target_date: date) -> None:

@@ -1,0 +1,40 @@
+name: Weekly Chaos Tests
+
+on:
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+
+jobs:
+  chaos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Start application stack
+        run: docker compose --profile full up -d --build
+
+      - name: Run chaos suite
+        run: uv run python tools/chaos_runner.py run --verbose
+
+      - name: Upload chaos reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chaos-reports
+          path: chaos_reports/
+
+      - name: Stop application stack
+        if: always()
+        run: docker compose --profile full down -v

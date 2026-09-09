@@ -122,6 +122,32 @@ services:
       - "3000:3000"
     command: python tools/chat_simulator.py --server
 
+  chaos_runner:
+    profiles: [chaos]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sokoflow_chaos_runner
+    depends_on:
+      api:
+        condition: service_started
+      fsm_worker:
+        condition: service_started
+      report_worker:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    environment:
+      CHAOS_ENABLED: "true"
+    volumes:
+      - .:/app
+      - ./chaos_reports:/app/chaos_reports
+    command: python tools/chaos_runner.py run --verbose
+
 volumes:
   pg_data:
   redis_data:

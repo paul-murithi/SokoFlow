@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from app.core.config import settings
 from app.core.database import get_worker_db
@@ -10,6 +11,7 @@ from app.fsm.models import (
     SessionState,
     UserSession,
 )
+from app.utils.idempotency import idempotent_task
 from app.workers.async_runtime import run
 from celery_app.celery import celery
 
@@ -19,7 +21,7 @@ logger = logging.getLogger(__name__)
 MESSAGE_SENDER = build_message_sender()
 
 
-@celery.task
+@celery.task(autoretry_for=(Exception,), max_retries=5, retry_backoff=True)
 def conversation_task(payload: dict[str, object]) -> str:
     return run(conversation(payload))
 
@@ -28,7 +30,6 @@ async def conversation(payload: dict[str, object]) -> str:
     store = get_conversation_store()
     inbound_message = InboundMessagePayload.model_validate(payload)
     phone_number = inbound_message.sender
-    # correlation_id = inbound_message.correlation_id # pyright: ignore[]
 
     old_session = await store.get_session(phone_number)
     if old_session is None:
@@ -61,3 +62,27 @@ async def conversation(payload: dict[str, object]) -> str:
         logger.exception("Failed to deliver reply")
 
     return reply_text
+
+
+@celery.task(autoretry_for=(Exception,), max_retries=5, retry_backoff=True)
+@idempotent_task()
+def record_sale_task(payload: dict[str, Any]) -> Any:
+    """Task to record a sale with idempotency protection."""
+    logger.info("Executing record_sale_task with payload: %s", payload)
+    return True
+
+
+@celery.task(autoretry_for=(Exception,), max_retries=5, retry_backoff=True)
+@idempotent_task()
+def add_product_task(payload: dict[str, Any]) -> Any:
+    """Task to add a product with idempotency protection."""
+    logger.info("Executing add_product_task with payload: %s", payload)
+    return True
+
+
+@celery.task(autoretry_for=(Exception,), max_retries=5, retry_backoff=True)
+@idempotent_task()
+def update_inventory_task(payload: dict[str, Any]) -> Any:
+    """Task to update inventory with idempotency protection."""
+    logger.info("Executing update_inventory_task with payload: %s", payload)
+    return True

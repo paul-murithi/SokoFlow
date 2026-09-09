@@ -1,0 +1,64 @@
+chaos:
+  enabled: true
+  environment: local
+  middleware:
+    enabled: true
+    probability: 0.05
+    scenarios:
+      - latency_injection
+      - error_injection
+  scenarios:
+    duplicate_message:
+      enabled: true
+      window_ms: 500
+      name: DUPLICATE_MESSAGE
+      description: Send duplicate message wamid within 500ms and verify deduplication
+    delayed_delivery:
+      enabled: true
+      session_ttl_seconds: 5
+      delay_seconds: 10
+      name: DELAYED_DELIVERY
+      description: Simulate session expiry by delaying webhook processing
+    malformed_json:
+      enabled: true
+      name: MALFORMED_JSON
+      description: Send structurally invalid JSON to webhook endpoint
+    invalid_hmac:
+      enabled: true
+      name: INVALID_HMAC
+      description: Send payload with invalid HMAC signature
+    worker_crash:
+      enabled: true
+      max_retries: 5
+      name: WORKER_CRASH
+      description: Simulate worker exception mid-task after state write
+    concurrent_messages:
+      enabled: true
+      concurrency_count: 5
+      name: CONCURRENT_MESSAGES
+      description: Send 5 concurrent messages from the same phone number
+    database_failure:
+      enabled: true
+      container_name: sokoflow_postgres
+      name: DATABASE_FAILURE
+      description: Simulate PostgreSQL outage during transaction
+    invalid_fsm_loop:
+      enabled: true
+      max_errors: 3
+      name: INVALID_FSM_LOOP
+      description: Send invalid input 4 consecutive times in same FSM state
+    redis_unavailability:
+      enabled: true
+      container_name: sokoflow_redis
+      name: REDIS_UNAVAILABILITY
+      description: Simulate Redis outage during session processing
+    report_timeout:
+      enabled: true
+      timeout_seconds: 60
+      name: REPORT_TIMEOUT
+      description: Mock document delivery timeout and verify retry idempotency
+  validation:
+    timeout_seconds: 30
+  logging:
+    verbose: true
+    output_dir: chaos_reports
