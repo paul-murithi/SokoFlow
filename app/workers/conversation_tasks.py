@@ -1,5 +1,7 @@
 import logging
 
+from sqlalchemy import select
+
 from app.core.config import settings
 from app.core.database import get_worker_db
 from app.fsm.conversation_store import get_conversation_store
@@ -10,6 +12,8 @@ from app.fsm.models import (
     SessionState,
     UserSession,
 )
+from app.models import Shop
+from app.services.localization import render_message
 from app.workers.async_runtime import run
 from celery_app.celery import celery
 
@@ -44,6 +48,8 @@ async def conversation(payload: dict[str, object]) -> str:
     async with get_worker_db() as db:
         fsm_engine = FSMEngine(db_session=db)
         result = await fsm_engine.process_message(current_session, inbound_message.message_text)
+        shop_result = await db.execute(select(Shop.locale).where(Shop.phone == phone_number))
+        shop_locale = shop_result.scalar_one_or_none() or "en"
 
     # Save message to Session
     await store.save_session(
@@ -53,7 +59,7 @@ async def conversation(payload: dict[str, object]) -> str:
         ttl=settings.session_ttl_seconds,
     )
 
-    reply_text = result.reply_text
+    reply_text = render_message(result.message_key, shop_locale, result.message_params)
 
     try:
         MESSAGE_SENDER.send_text(inbound_message.sender, reply_text)

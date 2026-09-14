@@ -8,7 +8,7 @@ from app.utils.errors import ResourceAlreadyExistsException
 
 class ShopService:
     async def create_shop(self, data: CreateShop, db: AsyncSession) -> Shop:
-        shop = Shop(phone=data.phone, name=data.name)
+        shop = Shop(phone=data.phone, name=data.name, locale=data.locale.value)
         db.add(shop)
 
         try:
