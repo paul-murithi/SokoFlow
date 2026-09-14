@@ -3,7 +3,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from app.utils.errors import InvalidInputError
 
-from .models import UserSession
+from .models import MessageKey, UserSession
 
 TRUE_VALUES = frozenset({"yes", "y", "ndio", "1"})
 FALSE_VALUES = frozenset({"no", "n", "zii", "2"})
@@ -22,7 +22,9 @@ def parse_product_name(raw_text: str) -> str:
     length = len(cleaned)
 
     if length < 2 or length > 100:
-        raise InvalidInputError("Product name must be between 2 and 100 characters.")
+        raise InvalidInputError(
+            "Product name must be between 2 and 100 characters.", MessageKey.PRODUCT_NAME_INVALID
+        )
 
     return cleaned
 
@@ -36,10 +38,13 @@ def parse_price(raw_text: str) -> Decimal:
     try:
         price = Decimal(cleaned).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     except InvalidOperation:  # pyright: ignore[] # TODO: Log error
-        raise InvalidInputError("Please enter a valid price, e.g. '150', 'KES 150', or '150/='.")
+        raise InvalidInputError(
+            "Please enter a valid price, e.g. '150', 'KES 150', or '150/='.",
+            MessageKey.PRICE_INVALID,
+        )
 
     if price <= 0:
-        raise InvalidInputError("Price must be greater than 0")
+        raise InvalidInputError("Price must be greater than 0", MessageKey.PRICE_NON_POSITIVE)
 
     return price
 
@@ -50,10 +55,12 @@ def parse_quantity(raw_text: str) -> int:
     try:
         quantity = int(cleaned)
     except ValueError:
-        raise InvalidInputError("Please enter a whole number, e.g. 0, 1, or 25.")
+        raise InvalidInputError(
+            "Please enter a whole number, e.g. 0, 1, or 25.", MessageKey.QUANTITY_INVALID
+        )
 
     if quantity < 0:
-        raise InvalidInputError("Quantity cannot be negative.")
+        raise InvalidInputError("Quantity cannot be negative.", MessageKey.QUANTITY_NEGATIVE)
 
     return quantity
 
@@ -67,4 +74,6 @@ def parse_confirmation(raw_text: str) -> bool:
     if cleaned in FALSE_VALUES:
         return False
 
-    raise InvalidInputError("Please reply with Yes/Y/Ndio/1 or No/N/Zii/2.")
+    raise InvalidInputError(
+        "Please reply with Yes/Y/Ndio/1 or No/N/Zii/2.", MessageKey.CONFIRMATION_INVALID
+    )

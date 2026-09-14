@@ -32,6 +32,42 @@ class SessionState(StrEnum):
     REPORT_PENDING = "REPORT_PENDING"
 
 
+class MessageKey(StrEnum):
+    FLOW_CANCELLED = "FLOW_CANCELLED"
+    TOO_MANY_INVALID = "TOO_MANY_INVALID"
+    UNKNOWN_INTENT = "UNKNOWN_INTENT"
+    START_SALE = "START_SALE"
+    START_STOCK_CHECK = "START_STOCK_CHECK"
+    REPORT_GENERATING = "REPORT_GENERATING"
+    START_ADD_PRODUCT = "START_ADD_PRODUCT"
+    ASK_PRICE = "ASK_PRICE"
+    ASK_STOCK_QUANTITY = "ASK_STOCK_QUANTITY"
+    CONFIRM_PRODUCT = "CONFIRM_PRODUCT"
+    PRODUCT_CANCELLED = "PRODUCT_CANCELLED"
+    PRODUCT_ADDED = "PRODUCT_ADDED"
+    ASK_SALE_QUANTITY = "ASK_SALE_QUANTITY"
+    ASK_QUANTITY = "ASK_QUANTITY"
+    PRODUCT_NOT_FOUND = "PRODUCT_NOT_FOUND"
+    PRODUCT_CHOICES = "PRODUCT_CHOICES"
+    CONFIRM_SALE = "CONFIRM_SALE"
+    SALE_CANCELLED = "SALE_CANCELLED"
+    SALE_RECORDED = "SALE_RECORDED"
+    STOCK_NOT_FOUND = "STOCK_NOT_FOUND"
+    STOCK_REMAINING = "STOCK_REMAINING"
+    PRODUCT_NAME_INVALID = "PRODUCT_NAME_INVALID"
+    PRICE_INVALID = "PRICE_INVALID"
+    PRICE_NON_POSITIVE = "PRICE_NON_POSITIVE"
+    QUANTITY_INVALID = "QUANTITY_INVALID"
+    QUANTITY_NEGATIVE = "QUANTITY_NEGATIVE"
+    CONFIRMATION_INVALID = "CONFIRMATION_INVALID"
+    UNKNOWN_ERROR = "UNKNOWN_ERROR"
+    INVALID_CHOICE = "INVALID_CHOICE"
+    QUANTITY_TOO_LOW = "QUANTITY_TOO_LOW"
+    SESSION_CONTEXT_LOST = "SESSION_CONTEXT_LOST"
+    SHOP_NOT_FOUND = "SHOP_NOT_FOUND"
+    INSUFFICIENT_STOCK = "INSUFFICIENT_STOCK"
+
+
 class ScoredProductMatch(BaseModel):
     """Pairs a product with its fuzzy match score to evaluate thresholds."""
 
@@ -163,4 +199,12 @@ class FSMResult(BaseModel):
     previous_state: SessionState
     new_state: SessionState
     context: SessionContext
-    reply_text: str
+    message_key: MessageKey
+    message_params: dict[str, object] = Field(default_factory=dict)
+
+    @property
+    def reply_text(self) -> str:
+        """Render the default English text for legacy callers and existing tests."""
+        from app.services.localization import render_message
+
+        return render_message(MessageKey(self.message_key), "en", self.message_params)

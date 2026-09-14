@@ -8,7 +8,7 @@ from app.fsm.fsm_utils import (
     parse_product_name,
     parse_quantity,
 )
-from app.fsm.models import FSMResult, SessionState, UserSession
+from app.fsm.models import FSMResult, MessageKey, SessionState, UserSession
 from app.fsm.primitives import FSMPrimitives
 from app.schemas.product import ProductCreate
 from app.services.product_service import ProductService
@@ -33,7 +33,7 @@ class AddProductFlow(FSMPrimitives):
         return self._build_result(
             previous_state=previous_state,
             session=session,
-            reply_text="Nice. What is the price in KES?",
+            message_key=MessageKey.ASK_PRICE,
         )
 
     async def handle_price(self, session: UserSession, message_text: str) -> FSMResult:
@@ -45,7 +45,7 @@ class AddProductFlow(FSMPrimitives):
         return self._build_result(
             previous_state=previous_state,
             session=session,
-            reply_text="Got it. How many units are in stock?",
+            message_key=MessageKey.ASK_STOCK_QUANTITY,
         )
 
     async def handle_qty(self, session: UserSession, message_text: str) -> FSMResult:
@@ -55,7 +55,8 @@ class AddProductFlow(FSMPrimitives):
 
         if product_name is None or product_price is None:
             raise InvalidInputError(
-                "I lost some product details. Type 'add product' to start again."
+                "I lost some product details. Type 'add product' to start again.",
+                MessageKey.SESSION_CONTEXT_LOST,
             )
 
         session.context.product_qty = parse_quantity(message_text)
@@ -64,10 +65,12 @@ class AddProductFlow(FSMPrimitives):
         return self._build_result(
             previous_state=previous_state,
             session=session,
-            reply_text=(
-                f"Please confirm: {product_name} at KES {product_price:.2f}, "
-                f"quantity {session.context.product_qty}. Reply Yes or No."
-            ),
+            message_key=MessageKey.CONFIRM_PRODUCT,
+            message_params={
+                "product_name": product_name,
+                "price": product_price,
+                "quantity": session.context.product_qty,
+            },
         )
 
     async def handle_confirm(self, session: UserSession, message_text: str) -> FSMResult:
@@ -80,7 +83,7 @@ class AddProductFlow(FSMPrimitives):
             return self._build_result(
                 previous_state=previous_state,
                 session=session,
-                reply_text="No problem. I cancelled the product flow.",
+                message_key=MessageKey.PRODUCT_CANCELLED,
             )
 
         product_name = session.context.product_name
@@ -89,7 +92,8 @@ class AddProductFlow(FSMPrimitives):
 
         if product_name is None or product_price is None or product_qty is None:
             raise InvalidInputError(
-                "I lost some product details. Type 'add product' to start again."
+                "I lost some product details. Type 'add product' to start again.",
+                MessageKey.SESSION_CONTEXT_LOST,
             )
 
         await self._persist_product_db(session)
@@ -99,10 +103,12 @@ class AddProductFlow(FSMPrimitives):
         return self._build_result(
             previous_state=previous_state,
             session=session,
-            reply_text=(
-                f"Product added: {product_name} at KES {product_price:.2f} "
-                f"with opening quantity {product_qty}."
-            ),
+            message_key=MessageKey.PRODUCT_ADDED,
+            message_params={
+                "product_name": product_name,
+                "price": product_price,
+                "quantity": product_qty,
+            },
         )
 
     async def _persist_product_db(self, session: UserSession) -> None:

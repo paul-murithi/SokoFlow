@@ -4,6 +4,7 @@ from app.core.database import get_worker_db
 from app.fsm.fsm_utils import parse_confirmation, parse_quantity
 from app.fsm.models import (
     FSMResult,
+    MessageKey,
     ProductResolutionStatus,
     SessionState,
     UserSession,
@@ -59,7 +60,7 @@ class RecordSaleFlow(FSMPrimitives):
                 return self._build_result(
                     previous_state=previous_state,
                     session=session,
-                    reply_text="Got it. How many units sold?",
+                    message_key=MessageKey.ASK_SALE_QUANTITY,
                 )
             case ProductResolutionStatus.AMBIGUOUS:
                 # Multiple candidates
@@ -69,16 +70,17 @@ class RecordSaleFlow(FSMPrimitives):
                 return self._build_result(
                     previous_state=previous_state,
                     session=session,
-                    reply_text=self._format_product_choices(matches.candidates),
+                    message_key=MessageKey.PRODUCT_CHOICES,
+                    message_params={
+                        "candidates": [candidate.model_dump() for candidate in matches.candidates]
+                    },
                 )
             case ProductResolutionStatus.NOT_FOUND:
                 # No close match
-                reply_text = (
-                    "I couldn't find a matching product.\n"
-                    "Please check the name and try again, or type *'cancel'* to stop."
-                )
                 return self._build_result(
-                    previous_state=previous_state, session=session, reply_text=reply_text
+                    previous_state=previous_state,
+                    session=session,
+                    message_key=MessageKey.PRODUCT_NOT_FOUND,
                 )
 
     async def handle_sale_product_selection(self, session: UserSession, message: str) -> FSMResult:
@@ -93,13 +95,15 @@ class RecordSaleFlow(FSMPrimitives):
         return self._build_result(
             previous_state=previous_state,
             session=session,
-            reply_text="Got it. How many units?",
+            message_key=MessageKey.ASK_QUANTITY,
         )
 
     async def handle_sale_product_qty(self, session: UserSession, message: str) -> FSMResult:
         quantity = parse_quantity(message)
         if quantity <= 0:
-            raise InvalidInputError("Please enter a quantity greater than 0.")
+            raise InvalidInputError(
+                "Please enter a quantity greater than 0.", MessageKey.QUANTITY_TOO_LOW
+            )
 
         previous_state = session.state
         product_name = session.context.product_name
@@ -116,7 +120,9 @@ class RecordSaleFlow(FSMPrimitives):
         if quantity > available_stock.quantity:
             raise InvalidInputError(
                 f"Insufficient stock! Only *{available_stock}* units of {product_name} remaining. "
-                f"Please enter a valid quantity."
+                "Please enter a valid quantity.",
+                MessageKey.INSUFFICIENT_STOCK,
+                {"available": available_stock.quantity, "product_name": product_name},
             )
 
         session.context.product_qty = quantity
@@ -126,13 +132,12 @@ class RecordSaleFlow(FSMPrimitives):
         return self._build_result(
             previous_state=previous_state,
             session=session,
-            reply_text=(
-                f"Confirm Sale:\n"
-                f"- Product: {product_name}\n"
-                f"- Quantity: {quantity}\n"
-                f"- Total: KES {total_amount:.2f}\n\n"
-                f"Reply *yes* to record or *no* to cancel."
-            ),
+            message_key=MessageKey.CONFIRM_SALE,
+            message_params={
+                "product_name": product_name,
+                "quantity": quantity,
+                "total": total_amount,
+            },
         )
 
     async def handle_confirm_sale_product(self, session: UserSession, message: str) -> FSMResult:
@@ -145,7 +150,7 @@ class RecordSaleFlow(FSMPrimitives):
             return self._build_result(
                 previous_state=previous_state,
                 session=session,
-                reply_text="No problem. I cancelled the sale flow.",
+                message_key=MessageKey.SALE_CANCELLED,
             )
 
         product_id = session.context.product_id
@@ -167,16 +172,16 @@ class RecordSaleFlow(FSMPrimitives):
         self._transition(session, SessionState.IDLE)
         self._clear_context_preserving_history(session)
 
-        reply_text = (
-            f"Sale recorded: *{product_name}* ({units_sold} units).\n"
-            f"Stock remaining: *{sale_result.remaining_stock}* units."
-        )
-
-        if sale_result.entered_low_stock:
-            reply_text += f"\n*Low Stock Alert*: Only {sale_result.remaining_stock} units left."
-
         return self._build_result(
-            previous_state=previous_state, session=session, reply_text=reply_text
+            previous_state=previous_state,
+            session=session,
+            message_key=MessageKey.SALE_RECORDED,
+            message_params={
+                "product_name": product_name,
+                "quantity": units_sold,
+                "remaining_stock": sale_result.remaining_stock,
+                "entered_low_stock": sale_result.entered_low_stock,
+            },
         )
 
     async def _record_sale_transaction(self, session: UserSession) -> SaleResult:

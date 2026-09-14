@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.fsm.fsm_utils import parse_product_name
 from app.fsm.models import (
     FSMResult,
+    MessageKey,
     ProductResolutionStatus,
     ScoredProductMatch,
     SessionState,
@@ -45,7 +46,7 @@ class StockLookupFlow(FSMPrimitives):
                     return self._build_result(
                         previous_state=previous_state,
                         session=session,
-                        reply_text="I could not find a product in the inventory with that name.",
+                        message_key=MessageKey.STOCK_NOT_FOUND,
                     )
                 case ProductResolutionStatus.AMBIGUOUS:
                     candidates = matches.candidates
@@ -54,7 +55,6 @@ class StockLookupFlow(FSMPrimitives):
 
                     session.context.product_candidates = candidates
 
-                    reply_message = self._format_product_choices(candidates)
                     self._transition(
                         session=session,
                         new_state=SessionState.CHECK_STOCK_PRODUCT_SELECTION,
@@ -62,7 +62,10 @@ class StockLookupFlow(FSMPrimitives):
                     return self._build_result(
                         previous_state=previous_state,
                         session=session,
-                        reply_text=reply_message,
+                        message_key=MessageKey.PRODUCT_CHOICES,
+                        message_params={
+                            "candidates": [candidate.model_dump() for candidate in candidates]
+                        },
                     )
 
                 case ProductResolutionStatus.EXACT_MATCH:
@@ -82,7 +85,8 @@ class StockLookupFlow(FSMPrimitives):
                     return self._build_result(
                         previous_state=previous_state,
                         session=session,
-                        reply_text=f"Remaining stock for {found_name}: {quantity} units",
+                        message_key=MessageKey.STOCK_REMAINING,
+                        message_params={"product_name": found_name, "quantity": quantity},
                     )
 
     async def handle_stock_product_selection(self, session: UserSession, message: str) -> FSMResult:
@@ -105,7 +109,8 @@ class StockLookupFlow(FSMPrimitives):
         return self._build_result(
             previous_state=previous_state,
             session=session,
-            reply_text=f"Remaining stock for {product_name}: {quantity} units",
+            message_key=MessageKey.STOCK_REMAINING,
+            message_params={"product_name": product_name, "quantity": quantity},
         )
 
     async def _get_inventory(

@@ -1,5 +1,7 @@
 from typing import Any
 
+from app.fsm.models import MessageKey
+
 
 class ResourceNotFoundException(Exception):
     def __init__(self, entity_name: str, identifier: Any):
@@ -88,8 +90,15 @@ class FSMError(Exception):
 class InvalidInputError(FSMError):
     """Raised when user input fails state validation."""
 
-    def __init__(self, message: str):
+    def __init__(
+        self,
+        message: str,
+        message_key: MessageKey | None = None,
+        message_params: dict[str, object] | None = None,
+    ):
         self.message = message
+        self.message_key = message_key
+        self.message_params = message_params or {}
         super().__init__(message)
 
 

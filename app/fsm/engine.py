@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.fsm.flows import AddProductFlow, RecordSaleFlow, StockLookupFlow
 from app.fsm.flows.generate_report import ReportFlow
 from app.fsm.intent_resolver import IntentResolver
-from app.fsm.models import FSMResult, Intent, SessionState, UserSession
+from app.fsm.models import FSMResult, Intent, MessageKey, SessionState, UserSession
 from app.fsm.primitives import FSMPrimitives
 from app.utils.errors import InvalidInputError
 
@@ -60,7 +60,7 @@ class FSMEngine(FSMPrimitives):
             return self._build_result(
                 previous_state=previous_state,
                 session=session,
-                reply_text="Flow cancelled. How can I help you today?",
+                message_key=MessageKey.FLOW_CANCELLED,
             )
 
         handler = self._handler_map.get(session.state, self._handle_idle)
@@ -78,16 +78,14 @@ class FSMEngine(FSMPrimitives):
                 return self._build_result(
                     previous_state=previous_state,
                     session=session,
-                    reply_text=(
-                        "Too many invalid attempts. I've cancelled this request "
-                        "so we can start fresh. Type 'add product' to try again."
-                    ),
+                    message_key=MessageKey.TOO_MANY_INVALID,
                 )
 
             return self._build_result(
                 previous_state=previous_state,
                 session=session,
-                reply_text=exc.message,
+                message_key=exc.message_key or MessageKey.UNKNOWN_ERROR,
+                message_params=exc.message_params or {"message": exc.message},
             )
 
     async def _handle_idle(self, session: UserSession, message_text: str) -> FSMResult:
@@ -95,7 +93,10 @@ class FSMEngine(FSMPrimitives):
         intent = self.intent_resolver.resolve(message_text)
 
         if intent is Intent.UNKNOWN:
-            raise InvalidInputError("Type 'add product', 'record sale', or 'check stock' to begin.")
+            raise InvalidInputError(
+                "Type 'add product', 'record sale', or 'check stock' to begin.",
+                MessageKey.UNKNOWN_INTENT,
+            )
 
         session.context.flow_started_at = datetime.now(timezone.utc)
 
@@ -104,7 +105,7 @@ class FSMEngine(FSMPrimitives):
             return self._build_result(
                 previous_state=previous_state,
                 session=session,
-                reply_text="Great, let's record a sale. What product was sold?",
+                message_key=MessageKey.START_SALE,
             )
 
         if intent is Intent.CHECK_STOCK:
@@ -112,7 +113,7 @@ class FSMEngine(FSMPrimitives):
             return self._build_result(
                 previous_state=previous_state,
                 session=session,
-                reply_text="Sure, let's check stock. Which product would you like to lookup?",
+                message_key=MessageKey.START_STOCK_CHECK,
             )
 
         if intent is Intent.GENERATE_REPORT:
@@ -122,10 +123,7 @@ class FSMEngine(FSMPrimitives):
             return self._build_result(
                 previous_state=previous_state,
                 session=session,
-                reply_text=(
-                    "Great. The report is being generated. "
-                    "Just a moment while we process and send it to you."
-                ),
+                message_key=MessageKey.REPORT_GENERATING,
             )
 
         self._transition(session, SessionState.ADD_PRODUCT_NAME)
@@ -133,5 +131,5 @@ class FSMEngine(FSMPrimitives):
         return self._build_result(
             previous_state=previous_state,
             session=session,
-            reply_text="Great, let's add a product. What is the product name?",
+            message_key=MessageKey.START_ADD_PRODUCT,
         )
