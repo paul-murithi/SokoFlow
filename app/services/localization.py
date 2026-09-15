@@ -109,11 +109,11 @@ _MESSAGES: dict[MessageKey, dict[str, str]] = {
     MessageKey.SALE_RECORDED: {
         "en": (
             "Sale recorded: *{product_name}* ({quantity} units).\n"
-            "Stock remaining: *{remaining_stock}* units.{low_stock}"
+            "Stock remaining: *{remaining_stock}* units."
         ),
         "sw": (
             "Mauzo yamerekodiwa: *{product_name}* ({quantity} vipande).\n"
-            "Stoo iliyobaki: *{remaining_stock}* vipande.{low_stock}"
+            "Stoo iliyobaki: *{remaining_stock}* vipande."
         ),
     },
     MessageKey.STOCK_NOT_FOUND: {
@@ -177,6 +177,16 @@ _MESSAGES: dict[MessageKey, dict[str, str]] = {
             "Stoo haitoshi! Zimesalia vipande *{available}* vya {product_name}. Weka kiasi sahihi."
         ),
     },
+    MessageKey.LOW_STOCK_ALERT: {
+        "en": (
+            "*Low Stock Alert*: Only {remaining_stock} units left for *{product_name}*. "
+            "Consider restocking."
+        ),
+        "sw": (
+            "*Tahadhari ya Stoo ya Chini*: Zimesalia vipande {remaining_stock} tu vya "
+            "*{product_name}*. Fikiria kuongeza bidhaa."
+        ),
+    },
 }
 
 
@@ -189,16 +199,6 @@ def render_message(
     template = _MESSAGES[message_key].get(selected_locale, _MESSAGES[message_key]["en"])
     values = dict(params or {})
 
-    if message_key is MessageKey.SALE_RECORDED:
-        values["low_stock"] = (
-            (
-                "\n*Low Stock Alert*: Only {remaining_stock} units left."
-                if selected_locale == "en"
-                else "\n*Tahadhari ya Stoo ya Chini*: Zimesalia vipande {remaining_stock} tu."
-            )
-            if values.get("entered_low_stock")
-            else ""
-        ).format(**values)
     if message_key is MessageKey.PRODUCT_CHOICES:
         candidates = values.get("candidates", [])
         values["choices"] = "\n".join(

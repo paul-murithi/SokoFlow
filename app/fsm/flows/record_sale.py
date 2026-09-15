@@ -20,6 +20,7 @@ from app.utils.errors import (
     ResourceConflictException,
     ResourceNotFoundException,
 )
+from app.workers import report_tasks
 
 
 class RecordSaleFlow(FSMPrimitives):
@@ -172,6 +173,13 @@ class RecordSaleFlow(FSMPrimitives):
         self._transition(session, SessionState.IDLE)
         self._clear_context_preserving_history(session)
 
+        if sale_result.entered_low_stock:
+            report_tasks.send_low_stock_alert.delay(
+                phone=session.phone,
+                product_id=str(product_id),
+                remaining_stock=sale_result.remaining_stock,
+            )
+
         return self._build_result(
             previous_state=previous_state,
             session=session,
@@ -180,7 +188,6 @@ class RecordSaleFlow(FSMPrimitives):
                 "product_name": product_name,
                 "quantity": units_sold,
                 "remaining_stock": sale_result.remaining_stock,
-                "entered_low_stock": sale_result.entered_low_stock,
             },
         )
 

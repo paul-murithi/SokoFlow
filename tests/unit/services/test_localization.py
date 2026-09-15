@@ -36,7 +36,7 @@ def test_parameterized_message_renders_in_both_locales() -> None:
     )
 
 
-def test_same_semantic_result_renders_for_shop_locale() -> None:
+def test_sale_recorded_message_does_not_include_low_stock_alert() -> None:
     result = FSMResult(
         previous_state=SessionState.CONFIRM_SALE,
         new_state=SessionState.IDLE,
@@ -46,18 +46,11 @@ def test_same_semantic_result_renders_for_shop_locale() -> None:
             "product_name": "Sugar",
             "quantity": 3,
             "remaining_stock": 10,
-            "entered_low_stock": True,
         },
     )
 
     english = render_message(result.message_key, "en", result.message_params)
     swahili = render_message(result.message_key, "sw", result.message_params)
 
-    assert english == (
-        "Sale recorded: *Sugar* (3 units).\n"
-        "Stock remaining: *10* units.\n*Low Stock Alert*: Only 10 units left."
-    )
-    assert swahili == (
-        "Mauzo yamerekodiwa: *Sugar* (3 vipande).\n"
-        "Stoo iliyobaki: *10* vipande.\n*Tahadhari ya Stoo ya Chini*: Zimesalia vipande 10 tu."
-    )
+    assert english == ("Sale recorded: *Sugar* (3 units).\nStock remaining: *10* units.")
+    assert swahili == ("Mauzo yamerekodiwa: *Sugar* (3 vipande).\nStoo iliyobaki: *10* vipande.")

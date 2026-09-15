@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from decimal import Decimal
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -237,13 +237,65 @@ async def test_handle_confirm_sale_product_persists_sale_record() -> None:
         ),
     )
 
-    result = await flow.handle_confirm_sale_product(session, "yes")
+    with patch("app.fsm.flows.record_sale.report_tasks.send_low_stock_alert.delay") as mock_alert:
+        result = await flow.handle_confirm_sale_product(session, "yes")
 
     assert result.new_state == SessionState.IDLE
     assert result.reply_text == ("Sale recorded: *Sugar* (3 units).\nStock remaining: *10* units.")
+    mock_alert.assert_not_called()
 
     assert len(sales_service.calls) == 1
     assert sales_service.calls[0]["shop_id"] == shop_id
     assert sales_service.calls[0]["product_id"] == product_id
     assert sales_service.calls[0]["quantity"] == 3
     assert result.context.product_name is None
+
+
+@pytest.mark.asyncio
+async def test_handle_confirm_sale_product_enqueues_alert_when_sale_enters_low_stock() -> None:
+    shop_id = uuid4()
+    product_id = uuid4()
+    sales_service = StubSalesService(
+        sale_result=SaleResult(
+            sale=SaleResponse(
+                id=uuid4(),
+                shop_id=shop_id,
+                product_id=product_id,
+                quantity=3,
+                unit_price=Decimal("120.00"),
+                total=Decimal("360.00"),
+                recorded_by="System",
+                created_at=datetime.now(timezone.utc),
+            ),
+            remaining_stock=4,
+            entered_low_stock=True,
+        )
+    )
+    flow = RecordSaleFlow(
+        db_session=object(),
+        product_service=StubProductService(
+            ProductResolution(status=ProductResolutionStatus.NOT_FOUND)
+        ),
+        sales_service=sales_service,
+    )
+    session = UserSession(
+        phone="+254700000206",
+        state=SessionState.CONFIRM_SALE,
+        context=SessionContext(
+            shop_id=shop_id,
+            product_id=product_id,
+            product_name="Sugar",
+            product_price=Decimal("120.00"),
+            product_qty=3,
+            history=[SessionState.IDLE],
+        ),
+    )
+
+    with patch("app.fsm.flows.record_sale.report_tasks.send_low_stock_alert.delay") as mock_alert:
+        await flow.handle_confirm_sale_product(session, "yes")
+
+    mock_alert.assert_called_once_with(
+        phone=session.phone,
+        product_id=str(product_id),
+        remaining_stock=4,
+    )
