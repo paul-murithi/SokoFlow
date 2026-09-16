@@ -60,9 +60,11 @@ async def _process_low_stock_alert(phone: str, product_id: UUID, remaining_stock
             )
             return
 
-    locale = shop.locale
+        locale = shop.locale
+        product_name = product.name
+
     params = {
-        "product_name": product.name,
+        "product_name": product_name,
         "remaining_stock": remaining_stock,
     }
 
@@ -74,7 +76,7 @@ async def _process_low_stock_alert(phone: str, product_id: UUID, remaining_stock
 
     try:
         MESSAGE_SENDER.send_text(
-            recipient=shop.phone,
+            recipient=phone,
             message_text=alert_body,
         )
     except MessageDeliveryError:
