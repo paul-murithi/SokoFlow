@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SokoFlow WhatsApp Simulator</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- Main Simulator Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="avatar-container">
+          <div class="avatar-icon">🛍️</div>
+          <span class="status-dot online" id="status-dot"></span>
+        </div>
+        <div class="header-info">
+          <div class="title-row">
+            <h1 class="app-title">SokoFlow</h1>
+            <span class="simulator-badge">WhatsApp Simulator</span>
+          </div>
+          <p class="subtitle" id="connection-status">Connected to backend</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="phone-selector-container">
+          <label for="phone-input">Phone:</label>
+          <input type="text" id="phone-input" value="254712345678" placeholder="2547XXXXXXXX" />
+        </div>
+        <button id="btn-toggle-debug" class="icon-button" title="Toggle System Panel">Settings</button>
+        <button id="btn-clear-chat" class="icon-button danger" title="Clear Chat History">Delete</button>
+      </div>
+    </header>
+
+    <!-- Technical Debug Panel (Optional Step 8) -->
+    <div id="debug-panel" class="debug-panel hidden">
+      <div class="debug-header">
+        <h3>System Status & Quick Actions</h3>
+        <span class="debug-close" id="debug-close">&times;</span>
+      </div>
+      <div class="debug-grid">
+        <div class="debug-item">
+          <span class="label">API Webhook:</span>
+          <span class="value" id="debug-webhook-url">http://localhost:8000/webhook/whatsapp</span>
+        </div>
+        <div class="debug-item">
+          <span class="label">API Status:</span>
+          <span class="value status-ok" id="debug-api-status">● Connected</span>
+        </div>
+        <div class="debug-item">
+          <span class="label">Simulated User:</span>
+          <span class="value" id="debug-phone-display">254712345678</span>
+        </div>
+      </div>
+      <div class="quick-prompts">
+        <span class="quick-prompt-label">Quick Flows:</span>
+        <button class="chip" data-cmd="add product">add product</button>
+        <button class="chip" data-cmd="sale">sale</button>
+        <button class="chip" data-cmd="stock">stock</button>
+        <button class="chip" data-cmd="report">report</button>
+        <button class="chip danger" data-cmd="cancel">cancel</button>
+      </div>
+    </div>
+
+    <!-- Chat Conversation Area -->
+    <main class="chat-viewport" id="chat-viewport">
+      <div class="chat-watermark">
+        🔒 SokoFlow Simulated WhatsApp Session — End-to-End Test Transport
+      </div>
+      <div class="date-divider">
+        <span>TODAY</span>
+      </div>
+      <div class="messages-container" id="messages-container">
+        <!-- Messages will be rendered dynamically here -->
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="typing-indicator hidden" id="typing-indicator">
+        <div class="message-bubble bot-bubble typing-bubble">
+          <span class="typing-text">SokoFlow is typing</span>
+          <div class="dot-flashing">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Input Bar -->
+    <footer class="input-bar">
+      <form id="chat-form" onsubmit="return false;">
+        <input type="text" id="message-input"
+          placeholder="Type a message (e.g., 'add product', 'sale', 'stock', 'report')..." autocomplete="off" />
+        <button type="submit" id="btn-send" class="send-button" title="Send message">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z" />
+          </svg>
+        </button>
+      </form>
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+
+</html>
