@@ -79,10 +79,14 @@ class FSMPrimitives:
         shop = result.scalar_one_or_none()
 
         if shop is None:
-            raise InvalidInputError(
-                "I couldn't find your shop profile. Please contact support.",
-                MessageKey.SHOP_NOT_FOUND,
+            shop = Shop(
+                phone=sender,
+                name="SokoFlow Demo Shop",
+                locale="en",
             )
+            db.add(shop)
+            await db.commit()
+            await db.refresh(shop)
 
         return shop.id
 
