@@ -11,6 +11,7 @@ from app.fsm.fsm_utils import (
 from app.fsm.models import FSMResult, MessageKey, SessionState, UserSession
 from app.fsm.primitives import FSMPrimitives
 from app.schemas.product import ProductCreate
+from app.services.inventory_service import InventoryService
 from app.services.product_service import ProductService
 from app.utils.errors import InvalidInputError
 
@@ -20,9 +21,11 @@ class AddProductFlow(FSMPrimitives):
         self,
         db_session: AsyncSession | None = None,
         product_service: ProductService | None = None,
+        inventory_service: InventoryService | None = None,
     ) -> None:
         self.db = db_session
         self.product_service = product_service or ProductService()
+        self.inventory_service = inventory_service or InventoryService()
 
     async def handle_name(self, session: UserSession, message_text: str) -> FSMResult:
         previous_state = session.state
@@ -112,16 +115,29 @@ class AddProductFlow(FSMPrimitives):
         )
 
     async def _persist_product_db(self, session: UserSession) -> None:
-        if self.db is None:
-            return
+        async with self._get_db_session(db_session=self.db) as db:
+            shop_id = session.context.shop_id
+            if shop_id is None:
+                shop_id = await self.get_shop_id(db=db, sender=session.phone)
+                session.context.shop_id = shop_id
 
-        shop_id = session.context.shop_id
-        product_name = session.context.product_name
-        product_price = session.context.product_price
+            product_name = session.context.product_name
+            product_price = session.context.product_price
+            product_qty = session.context.product_qty
 
-        if shop_id is None or product_name is None or product_price is None:
-            return
+            if product_name is None or product_price is None:
+                raise InvalidInputError(
+                    "I lost some product details. Type 'add product' to start again.",
+                    MessageKey.SESSION_CONTEXT_LOST,
+                )
 
-        payload = ProductCreate(name=product_name, price=product_price, shop_id=shop_id)
-        # TODO: Database save may fail
-        await self.product_service.create_product(payload, self.db)
+            payload = ProductCreate(name=product_name, price=product_price, shop_id=shop_id)
+            product = await self.product_service.create_product(payload, db)
+
+            if product_qty is not None and product_qty > 0:
+                await self.inventory_service.add_stock(
+                    product_id=product.id,
+                    quantity=product_qty,
+                    db=db,
+                    commit=True,
+                )
