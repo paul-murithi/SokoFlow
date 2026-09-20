@@ -43,6 +43,13 @@ async def test_create_shop_duplicate_phone_returns_409(client: AsyncClient):
     assert second_response.status_code == status.HTTP_409_CONFLICT
 
 
+async def test_update_shop_locale_creates_demo_shop(client: AsyncClient):
+    response = await client.patch("/shops/254712345678/locale", json={"locale": "sw"})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["locale"] == "sw"
+
+
 async def test_create_product_invalid_price(client: AsyncClient, db_session: AsyncSession):
     shop_id = uuid4()
 

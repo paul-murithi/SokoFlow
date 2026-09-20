@@ -5,6 +5,7 @@ from tools.chat_simulator import (
     construct_payload,
     extract_bot_text,
     get_messages,
+    parse_locale_command,
     start_receiver_server,
     store_message,
 )
@@ -22,6 +23,13 @@ def test_extract_bot_text():
     assert extract_bot_text({"data": {"message": "Nested"}}) == "Nested"
     assert extract_bot_text([{"text": "List item"}]) == "List item"
     assert extract_bot_text({}) == ""
+
+
+def test_parse_locale_command():
+    assert parse_locale_command("locale sw") == "sw"
+    assert parse_locale_command("set locale en") == "en"
+    assert parse_locale_command("locale fr") is None
+    assert parse_locale_command("add product") is None
 
 
 def test_messages_store_operations():

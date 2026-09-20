@@ -11,6 +11,10 @@ class CreateShop(BaseModel):
     locale: ShopLocale = ShopLocale.ENGLISH
 
 
+class UpdateShopLocale(BaseModel):
+    locale: ShopLocale
+
+
 class ShopResponse(BaseModel):
     id: UUID
     name: str

@@ -20,6 +20,7 @@ STATIC_PHONE_NUMBER = os.getenv(
     "DEFAULT_SIMULATOR_PHONE", settings.whatsapp_phone_number_id or "254712345678"
 )
 STATIC_DIR = Path(__file__).parent / "static"
+SUPPORTED_SIMULATOR_LOCALES = {"en": "English", "sw": "Swahili"}
 
 # In-memory store for messages per phone number: { phone: [ {id, sender, type, text, ...}, ... ] }
 messages_store: dict[str, list[dict[str, object]]] = {}
@@ -91,6 +92,48 @@ def clear_messages(phone: str) -> None:
 def get_messages(phone: str) -> list[dict[str, object]]:
     with store_lock:
         return list(messages_store.get(phone, []))
+
+
+def parse_locale_command(message: str) -> str | None:
+    parts = message.strip().lower().split()
+    if len(parts) == 2 and parts[0] == "locale":
+        return parts[1] if parts[1] in SUPPORTED_SIMULATOR_LOCALES else None
+    if len(parts) == 3 and parts[:2] == ["set", "locale"]:
+        return parts[2] if parts[2] in SUPPORTED_SIMULATOR_LOCALES else None
+    return None
+
+
+def configure_shop_locale(phone: str, locale: str) -> tuple[bool, str]:
+    api_url = WEBHOOK_URL.rsplit("/webhook", 1)[0]
+    try:
+        response = httpx.patch(
+            f"{api_url}/shops/{phone}/locale",
+            json={"locale": locale},
+            timeout=5.0,
+        )
+        response.raise_for_status()
+        return True, (
+            f"This shop is now configured to use {SUPPORTED_SIMULATOR_LOCALES[locale]} "
+            "for outgoing messages."
+        )
+    except httpx.HTTPError as exc:
+        return False, f"Could not configure shop locale: {exc}"
+
+
+def store_locale_result(phone: str, locale: str) -> tuple[bool, str]:
+    success, confirmation = configure_shop_locale(phone, locale)
+    if success:
+        store_message(
+            phone,
+            {
+                "id": f"bot-{uuid4()}",
+                "sender": "bot",
+                "type": "text",
+                "text": confirmation,
+                "timestamp": datetime.now().isoformat(),
+            },
+        )
+    return success, confirmation
 
 
 class BotReplyReceiver(BaseHTTPRequestHandler):
@@ -203,6 +246,15 @@ class BotReplyReceiver(BaseHTTPRequestHandler):
                         "timestamp": datetime.now().isoformat(),
                     },
                 )
+
+                locale = parse_locale_command(message_text)
+                if locale:
+                    success, confirmation = store_locale_result(phone, locale)
+                    if not success:
+                        self._send_json_response({"detail": confirmation}, 502)
+                        return
+                    self._send_json_response({"status": "ok", "message_id": msg_id})
+                    return
 
                 # Send simulated WhatsApp webhook to backend API
                 webhook_payload = construct_payload(
@@ -396,6 +448,14 @@ def main() -> None:
                         "timestamp": datetime.now().isoformat(),
                     },
                 )
+                locale = parse_locale_command(message_text)
+                if locale:
+                    success, confirmation = store_locale_result(STATIC_PHONE_NUMBER, locale)
+                    print(f"\nBot: {confirmation}\n", end="", flush=True)
+                    if not success:
+                        continue
+                    continue
+
                 payload = construct_payload(
                     phone_number=STATIC_PHONE_NUMBER,
                     message=message_text,
