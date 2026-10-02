@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dto.sales import (
     LowStockProductDTO,
     RevenueSummary,
+    SlowMovingProductDTO,
     TopProductByRevenue,
     TopProductByUnits,
 )
@@ -61,3 +62,25 @@ class SalesRepository:
         top_revenue_products = [TopProductByRevenue.from_row(row) for row in top_revenue_rows]
 
         return top_units, top_revenue_products
+
+    async def get_slow_moving_products(
+        self,
+        shop_id: UUID,
+        day_start: datetime,
+        day_end: datetime,
+        max_sales_count: int,
+        limit: int,
+        db: AsyncSession,
+    ) -> list[SlowMovingProductDTO]:
+        stmt = text(load_sql(SalesSQL.GET_SLOW_MOVING_PRODUCTS))
+        result = await db.execute(
+            stmt,
+            {
+                "shop_id": shop_id,
+                "day_start": day_start,
+                "day_end": day_end,
+                "max_sales_count": max_sales_count,
+                "limit": limit,
+            },
+        )
+        return [SlowMovingProductDTO(**row) for row in result.mappings().all()]

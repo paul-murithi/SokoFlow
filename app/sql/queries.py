@@ -16,3 +16,4 @@ class SalesSQL(StrEnum):
     GET_PRODUCTS_WITH_LOW_STOCK = "sales/get_products_with_low_stock.sql"
     GET_TOP_MOVING_PRODUCTS_BY_UNITS = "sales/get_top_moving_products_by_units.sql"
     GET_TOP_MOVING_PRODUCTS_BY_REVENUE = "sales/get_top_moving_products_by_revenue.sql"
+    GET_SLOW_MOVING_PRODUCTS = "sales/get_slow_moving_products.sql"
