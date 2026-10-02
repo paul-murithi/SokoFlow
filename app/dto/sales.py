@@ -50,3 +50,12 @@ class LowStockProductDTO:
     name: str
     quantity: int
     low_stock_threshold: int
+
+
+@dataclass(frozen=True)
+class SlowMovingProductDTO:
+    product_id: UUID
+    product_name: str
+    units_sold: int
+    current_stock: int
+    unit_price: Decimal
