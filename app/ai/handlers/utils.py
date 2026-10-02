@@ -36,7 +36,7 @@ def _resolve_relative_local_boundaries(
         local_start = datetime.combine(date(anchor_date.year, 1, 1), time.min, tzinfo=tz)
         local_end = datetime.combine(date(anchor_date.year + 1, 1, 1), time.min, tzinfo=tz)
     else:
-        #TODO: Unreachable due to Pydantic enum validation.
+        # TODO: Unreachable due to Pydantic enum validation.
         raise ValueError(f"Unknown relative period: {relative_period}")
 
     return local_start, local_end
@@ -93,9 +93,7 @@ def resolve_previous_period_boundaries(
         relative_period = period.relative_period
         if relative_period is None:
             raise ValueError("Missing relative period specification.")
-        current_start, _ = _resolve_relative_local_boundaries(
-            relative_period, now.date(), tz
-        )
+        current_start, _ = _resolve_relative_local_boundaries(relative_period, now.date(), tz)
         previous_start, previous_end = _resolve_relative_local_boundaries(
             relative_period,
             current_start.date() - timedelta(days=1),

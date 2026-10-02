@@ -5,6 +5,7 @@ Implements a multi-stage validation pipeline:
 2. Schema validation (Pydantic model validation with extra="forbid")
 3. Domain validation (Business rules, such as date range checks)
 """
+
 from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError

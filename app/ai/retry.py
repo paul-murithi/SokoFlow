@@ -35,7 +35,7 @@ class BoundedRetryPolicy:
     Strictly enforces MAX_RETRIES = 1.
     """
 
-    MAX_RETRIES: int = 1 #TODO: Make this configurable via settings
+    MAX_RETRIES: int = 1  # TODO: Make this configurable via settings
 
     @classmethod
     def can_retry(cls, current_attempt: int, error: Exception) -> bool:
