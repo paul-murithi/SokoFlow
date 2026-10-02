@@ -19,7 +19,7 @@ class ToolValidator:
     """Validates raw LLM arguments against Pydantic schemas and domain rules."""
 
     @staticmethod
-    def validate_schema(input_model: type[T], raw_args: dict[str, Any]) -> T:
+    def validate_schema(input_model: type[T], raw_args: Any) -> T:
         """Validates raw arguments against input Pydantic schema.
 
         Rejects unexpected arguments (e.g. shop_id injection attempts).
@@ -30,6 +30,8 @@ class ToolValidator:
                 "Argument 'shop_id' is prohibited in AI tool calls. "
                 "Shop scope is trusted backend context."
             )
+        if not isinstance(raw_args, dict):
+            raise SchemaValidationError("Expected tool arguments to be a dictionary")
 
         try:
             validated_input = input_model.model_validate(raw_args)
