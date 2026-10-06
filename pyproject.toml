@@ -84,7 +84,7 @@ select = [
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
-exclude = ["alembic/"]
+exclude = ["alembic/", "^scripts/benchmark_providers\\.py$"]
 plugins = [
   "pydantic.mypy"
 ]

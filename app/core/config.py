@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
+    # AI
+    groq_api_key: str | None = None
+    openrouter_api_key: str | None = None
+
 
 # Singleton
 settings = Settings()
