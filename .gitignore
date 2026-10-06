@@ -55,6 +55,8 @@ redis_data/
 celerybeat-schedule
 celerybeat.pid
 celerybeat-schedule*
+scripts/benchmark_providers.py
+benchmark.md
 
 # ── Logs ─────────────────────────────────────────────────────────
 *.log
