@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # AI
     groq_api_key: str | None = None
     openrouter_api_key: str | None = None
+    llm_provider_endpoint: str = "https://api.groq.com/openai/v1/chat/completions"
+    llm_model: str = "openai/gpt-oss-20b"
+    llm_timeout_seconds: float = 30.0
 
 
 # Singleton

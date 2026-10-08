@@ -78,3 +78,36 @@ class InfrastructureError(AIToolError):
     def __init__(self, message: str, original_exception: Exception | None = None) -> None:
         super().__init__(message)
         self.original_exception = original_exception
+
+
+class LLMProviderError(AIToolError):
+    """Base exception for LLM provider boundary failures."""
+
+    def __init__(self, message: str, original_exception: Exception | None = None) -> None:
+        super().__init__(message)
+        self.original_exception = original_exception
+
+
+class LLMProviderTimeoutError(LLMProviderError):
+    """Raised when request to LLM provider times out."""
+
+
+class LLMProviderUnavailableError(LLMProviderError):
+    """Raised when LLM provider service is unavailable (5xx status)."""
+
+
+class LLMProviderAPIError(LLMProviderError):
+    """Raised when LLM provider returns a client error (4xx status)."""
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        original_exception: Exception | None = None,
+    ) -> None:
+        super().__init__(message, original_exception=original_exception)
+        self.status_code = status_code
+
+
+class LLMResponseFormatError(LLMProviderError):
+    """Raised when LLM provider response structure cannot be interpreted."""
