@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     llm_provider_endpoint: str = "https://api.groq.com/openai/v1/chat/completions"
     llm_model: str = "openai/gpt-oss-20b"
     llm_timeout_seconds: float = 30.0
+    analytics_enabled: bool = True
+    analytics_follow_up_ttl_seconds: int = 600
+
 
 
 # Singleton
