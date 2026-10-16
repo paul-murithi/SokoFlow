@@ -187,6 +187,70 @@ _MESSAGES: dict[MessageKey, dict[str, str]] = {
             "*{product_name}*. Fikiria kuongeza bidhaa."
         ),
     },
+    MessageKey.ANALYTICS_SALES_SUMMARY: {
+        "en": (
+            "Sales summary for {period_name}:\n"
+            "- Total Revenue: KES {total_revenue}\n"
+            "- Transactions: {transaction_count}"
+        ),
+        "sw": (
+            "Muhtasari wa mauzo ya {period_name}:\n"
+            "- Jumla ya Mapato: KES {total_revenue}\n"
+            "- Miamala: {transaction_count}"
+        ),
+    },
+    MessageKey.ANALYTICS_SALES_SUMMARY_EMPTY: {
+        "en": "No sales were recorded for {period_name}.",
+        "sw": "Hakuna mauzo yaliyorekodiwa kwa {period_name}.",
+    },
+    MessageKey.ANALYTICS_STOCK_LEVEL: {
+        "en": "Stock level for *{product_name}*: {quantity} units (KES {price} / unit).",
+        "sw": "Kiwango cha stoo ya *{product_name}*: vipande {quantity} (KES {price} kwa kipande).",
+    },
+    MessageKey.ANALYTICS_STOCK_LEVEL_LOW: {
+        "en": (
+            "Stock level for *{product_name}*: *{quantity} units* (KES {price} / unit).\n"
+            "*Low Stock Warning*: At or below threshold ({threshold} units)!"
+        ),
+        "sw": (
+            "Kiwango cha stoo ya *{product_name}*: "
+            "*vipande {quantity}* (KES {price} kwa kipande).\n"
+            "*Tahadhari ya Stoo ya Chini*: Imefikia au iko chini ya kiwango cha tahadhari "
+            "({threshold} vipande)!"
+        ),
+    },
+    MessageKey.ANALYTICS_TOP_PRODUCTS: {
+        "en": "Top products for {period_name}:\n{products_summary}",
+        "sw": "Bidhaa zinazoongoza kwa {period_name}:\n{products_summary}",
+    },
+    MessageKey.ANALYTICS_TOP_PRODUCTS_EMPTY: {
+        "en": "No product sales were recorded for {period_name}.",
+        "sw": "Hakuna mauzo ya bidhaa yaliyorekodiwa kwa {period_name}.",
+    },
+    MessageKey.ANALYTICS_INVALID_PROPOSAL: {
+        "en": (
+            "I didn't quite understand that question. "
+            "You can ask about sales, stock, or top products."
+        ),
+        "sw": (
+            "Sikuelewa vizuri swali hilo. "
+            "Unaweza kuuliza kuhusu mauzo, stoo, au bidhaa zinazoongoza."
+        ),
+    },
+    MessageKey.ANALYTICS_PROVIDER_UNAVAILABLE: {
+        "en": (
+            "I'm having trouble connecting to the analytics service right now. "
+            "Please try again shortly."
+        ),
+        "sw": (
+            "Ninapata shida kuunganisha kwenye huduma ya takwimu kwa sasa. "
+            "Tafadhali jaribu tena baada ya muda mfupi."
+        ),
+    },
+    MessageKey.ANALYTICS_DOMAIN_ERROR: {
+        "en": "{message}",
+        "sw": "{message}",
+    },
 }
 
 
