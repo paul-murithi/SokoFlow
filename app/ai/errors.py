@@ -64,6 +64,18 @@ class ProductResolutionFailedError(DomainValidationError):
         super().__init__(f"Could not resolve product '{search_term}': {reason}")
 
 
+class ProductAmbiguousError(DomainValidationError):
+    """Raised when a product search term matches multiple candidate products."""
+
+    def __init__(self, search_term: str, candidates: list[Any]) -> None:
+        self.search_term = search_term
+        self.candidates = candidates
+        super().__init__(
+            f"Product '{search_term}' is ambiguous with {len(candidates)} candidates."
+        )
+
+
+
 class UnsupportedOperationError(DomainValidationError):
     """Raised when a requested feature or parameter combination is not supported."""
 

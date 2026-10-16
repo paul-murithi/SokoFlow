@@ -113,14 +113,24 @@ class ToolExecutor:
             logger.warning(
                 "ToolExecutor domain execution error for tool '%s': %s", tool_name, exc.message
             )
+            error_details = None
+            if hasattr(exc, "candidates"):
+                candidates = getattr(exc, "candidates")
+                error_details = {
+                    "candidates": [
+                        c.model_dump() if hasattr(c, "model_dump") else c for c in candidates
+                    ]
+                }
             return ToolExecutionResult(
                 status="failure",
                 tool=tool_name,
                 error=ToolExecutionError(
                     error_type=type(exc).__name__,
                     message=exc.message,
+                    details=error_details,
                 ),
             )
+
         except InfrastructureError as exc:
             logger.error(
                 "ToolExecutor infrastructure error for tool '%s': %s", tool_name, exc.message

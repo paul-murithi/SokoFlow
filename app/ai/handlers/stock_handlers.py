@@ -19,13 +19,16 @@ from app.ai.contracts.tools import (
     LowStockItem,
     SlowMovingItem,
 )
-from app.ai.errors import ProductNotFoundError
+from app.ai.errors import ProductAmbiguousError, ProductNotFoundError
 from app.ai.handlers.utils import resolve_period_boundaries
+from app.ai.product_resolver import ProductResolver
+from app.fsm.models import ProductResolutionStatus
 from app.models.inventory import Inventory
 from app.models.product import Product
 from app.repositories.sales_repo import SalesRepository
 
 sales_repo = SalesRepository()
+product_resolver = ProductResolver()
 
 
 async def handle_get_stock_level(
@@ -34,9 +37,32 @@ async def handle_get_stock_level(
     db: AsyncSession,
 ) -> GetStockLevelOutput:
     """Retrieves current inventory level, threshold, and price for a resolved product."""
-    product = await db.get(Product, input_data.product_id)
-    if product is None or product.shop_id != shop_id:
-        raise ProductNotFoundError(input_data.product_id)
+    nil_uuid = UUID("00000000-0000-0000-0000-000000000000")
+    product: Product | None = None
+
+    if input_data.product_id and input_data.product_id != nil_uuid:
+        product = await db.get(Product, input_data.product_id)
+        if product is None or product.shop_id != shop_id:
+            raise ProductNotFoundError(input_data.product_id)
+    elif input_data.product_name:
+        resolution = await product_resolver.resolve_product(
+            shop_id=shop_id,
+            search_term=input_data.product_name,
+            db=db,
+        )
+        if resolution.status == ProductResolutionStatus.EXACT_MATCH and resolution.product:
+            product = await db.get(Product, resolution.product.id)
+            if product is None or product.shop_id != shop_id:
+                raise ProductNotFoundError(input_data.product_name)
+        elif resolution.status == ProductResolutionStatus.AMBIGUOUS:
+            raise ProductAmbiguousError(
+                search_term=input_data.product_name,
+                candidates=resolution.candidates,
+            )
+        else:
+            raise ProductNotFoundError(input_data.product_name)
+    else:
+        raise ProductNotFoundError("Product identifier not provided")
 
     stmt = select(Inventory).where(Inventory.product_id == product.id)
     inv_result = await db.execute(stmt)

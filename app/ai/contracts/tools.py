@@ -8,7 +8,7 @@ from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.ai.contracts.period import ReportingPeriod
 
@@ -70,9 +70,19 @@ class GetTopProductsOutput(BaseModel):
 class GetStockLevelInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    product_id: UUID = Field(
-        ..., description="The resolved UUID of the product whose stock level is requested."
+    product_id: UUID | None = Field(
+        default=None, description="The resolved UUID of the product whose stock level is requested."
     )
+    product_name: str | None = Field(
+        default=None, description="The product name if UUID is not known."
+    )
+
+    @model_validator(mode="after")
+    def validate_identifier_present(self) -> "GetStockLevelInput":
+        if self.product_id is None and not (self.product_name and self.product_name.strip()):
+            raise ValueError("Either product_id or product_name must be provided.")
+        return self
+
 
 
 class GetStockLevelOutput(BaseModel):
