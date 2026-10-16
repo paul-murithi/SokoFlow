@@ -108,7 +108,6 @@ class FSMEngine(FSMPrimitives):
                 MessageKey.UNKNOWN_INTENT,
             )
 
-
         session.context.flow_started_at = datetime.now(timezone.utc)
 
         if intent is Intent.RECORD_SALE:

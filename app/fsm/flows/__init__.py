@@ -5,4 +5,3 @@ from .record_sale import RecordSaleFlow
 from .stock_lookup import StockLookupFlow
 
 __all__ = ["AddProductFlow", "AnalyticsFlow", "RecordSaleFlow", "StockLookupFlow", "ReportFlow"]
-

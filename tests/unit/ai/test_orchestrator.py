@@ -442,9 +442,7 @@ async def test_multi_turn_follow_up_passes_prior_context(mock_llm_client, mock_e
         executor=mock_executor,
     )
 
-    outcome = await orchestrator.run(
-        "and yesterday?", shop_id, mock_db, prior_context=prior
-    )
+    outcome = await orchestrator.run("and yesterday?", shop_id, mock_db, prior_context=prior)
 
     assert outcome.outcome_type == OutcomeType.ANSWERED
     # Verify that prior context was sent to generate

@@ -84,7 +84,6 @@ class GetStockLevelInput(BaseModel):
         return self
 
 
-
 class GetStockLevelOutput(BaseModel):
     product_id: UUID
     product_name: str

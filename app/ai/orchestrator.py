@@ -76,9 +76,7 @@ class AnalyticsOrchestrator:
         messages.append(LLMMessage(role="user", content=message_text))
 
         all_tools = self.registry.get_openai_tools()
-        tools = [
-            t for t in all_tools if t.get("function", {}).get("name") in self.active_tools
-        ]
+        tools = [t for t in all_tools if t.get("function", {}).get("name") in self.active_tools]
 
         # Bounded retry: at most 1 retry for LLM response or tool argument validation errors
         for attempt in range(2):
@@ -175,9 +173,7 @@ class AnalyticsOrchestrator:
                 )
 
             if error.error_type == "ProductAmbiguousError":
-                candidates_data = (
-                    error.details.get("candidates", []) if error.details else []
-                )
+                candidates_data = error.details.get("candidates", []) if error.details else []
                 candidates = [
                     ScoredProductMatch.model_validate(c) if isinstance(c, dict) else c
                     for c in candidates_data

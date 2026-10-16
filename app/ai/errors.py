@@ -70,10 +70,7 @@ class ProductAmbiguousError(DomainValidationError):
     def __init__(self, search_term: str, candidates: list[Any]) -> None:
         self.search_term = search_term
         self.candidates = candidates
-        super().__init__(
-            f"Product '{search_term}' is ambiguous with {len(candidates)} candidates."
-        )
-
+        super().__init__(f"Product '{search_term}' is ambiguous with {len(candidates)} candidates.")
 
 
 class UnsupportedOperationError(DomainValidationError):

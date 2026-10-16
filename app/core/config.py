@@ -59,6 +59,5 @@ class Settings(BaseSettings):
     analytics_follow_up_ttl_seconds: int = 600
 
 
-
 # Singleton
 settings = Settings()

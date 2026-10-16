@@ -85,9 +85,7 @@ class AnalyticsFlow(FSMPrimitives):
                 session.context.pending_analytics_call = PendingCallContext(
                     tool_name=outcome.tool or "get_stock_level",
                     arguments=(
-                        outcome.pending_call.get("arguments", {})
-                        if outcome.pending_call
-                        else {}
+                        outcome.pending_call.get("arguments", {}) if outcome.pending_call else {}
                     ),
                     candidates=outcome.candidates,
                 )
