@@ -4,11 +4,12 @@ from typing import Awaitable, Callable
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.fsm.flows import AddProductFlow, RecordSaleFlow, StockLookupFlow
+from app.fsm.flows import AddProductFlow, AnalyticsFlow, RecordSaleFlow, StockLookupFlow
 from app.fsm.flows.generate_report import ReportFlow
 from app.fsm.intent_resolver import IntentResolver
 from app.fsm.models import FSMResult, Intent, MessageKey, SessionState, UserSession
 from app.fsm.primitives import FSMPrimitives
+from app.fsm.routing_policy import AnalyticsRoutingPolicy
 from app.utils.errors import InvalidInputError
 
 OVERRIDE_COMMANDS = frozenset({"cancel", "menu", "exit", "stop"})
@@ -24,6 +25,8 @@ class FSMEngine(FSMPrimitives):
         self.record_sale_flow = RecordSaleFlow(db_session=db_session)
         self.stock_lookup_flow = StockLookupFlow(db_session=db_session)
         self.generate_report_flow = ReportFlow(db_session=db_session)
+        self.analytics_flow = AnalyticsFlow(db_session=db_session)
+        self.routing_policy = AnalyticsRoutingPolicy()
         self._handler_map: dict[
             SessionState, Callable[[UserSession, str], Awaitable[FSMResult]]
         ] = {
@@ -47,6 +50,10 @@ class FSMEngine(FSMPrimitives):
             ),
             # Daily Report Flow
             SessionState.REPORT_PENDING: self._handle_idle,
+            # Analytics Flow
+            SessionState.ANALYTICS_PRODUCT_SELECTION: (
+                self.analytics_flow.handle_product_selection
+            ),
         }
 
     async def process_message(self, session: UserSession, message_text: str) -> FSMResult:
@@ -93,10 +100,14 @@ class FSMEngine(FSMPrimitives):
         intent = self.intent_resolver.resolve(message_text)
 
         if intent is Intent.UNKNOWN:
+            if self.routing_policy.can_route(session, message_text):
+                return await self.analytics_flow.handle_query(session, message_text)
+
             raise InvalidInputError(
                 "Type 'add product', 'record sale', or 'check stock' to begin.",
                 MessageKey.UNKNOWN_INTENT,
             )
+
 
         session.context.flow_started_at = datetime.now(timezone.utc)
 

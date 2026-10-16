@@ -1,7 +1,7 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from enum import IntEnum, StrEnum
-from typing import List, Optional
+from typing import Any, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -31,6 +31,9 @@ class SessionState(StrEnum):
     # Daily Report Flow
     REPORT_PENDING = "REPORT_PENDING"
 
+    # Analytics Flow
+    ANALYTICS_PRODUCT_SELECTION = "ANALYTICS_PRODUCT_SELECTION"
+
 
 class MessageKey(StrEnum):
     FLOW_CANCELLED = "FLOW_CANCELLED"
@@ -43,6 +46,7 @@ class MessageKey(StrEnum):
     ASK_PRICE = "ASK_PRICE"
     ASK_STOCK_QUANTITY = "ASK_STOCK_QUANTITY"
     CONFIRM_PRODUCT = "CONFIRM_PRODUCT"
+
     PRODUCT_CANCELLED = "PRODUCT_CANCELLED"
     PRODUCT_ADDED = "PRODUCT_ADDED"
     ASK_SALE_QUANTITY = "ASK_SALE_QUANTITY"
@@ -67,6 +71,16 @@ class MessageKey(StrEnum):
     SHOP_NOT_FOUND = "SHOP_NOT_FOUND"
     INSUFFICIENT_STOCK = "INSUFFICIENT_STOCK"
     LOW_STOCK_ALERT = "LOW_STOCK_ALERT"
+    # Analytics message keys
+    ANALYTICS_SALES_SUMMARY = "ANALYTICS_SALES_SUMMARY"
+    ANALYTICS_SALES_SUMMARY_EMPTY = "ANALYTICS_SALES_SUMMARY_EMPTY"
+    ANALYTICS_STOCK_LEVEL = "ANALYTICS_STOCK_LEVEL"
+    ANALYTICS_STOCK_LEVEL_LOW = "ANALYTICS_STOCK_LEVEL_LOW"
+    ANALYTICS_TOP_PRODUCTS = "ANALYTICS_TOP_PRODUCTS"
+    ANALYTICS_TOP_PRODUCTS_EMPTY = "ANALYTICS_TOP_PRODUCTS_EMPTY"
+    ANALYTICS_INVALID_PROPOSAL = "ANALYTICS_INVALID_PROPOSAL"
+    ANALYTICS_PROVIDER_UNAVAILABLE = "ANALYTICS_PROVIDER_UNAVAILABLE"
+    ANALYTICS_DOMAIN_ERROR = "ANALYTICS_DOMAIN_ERROR"
 
 
 class ScoredProductMatch(BaseModel):
@@ -92,6 +106,22 @@ class ProductResolution(BaseModel):
     candidates: list[ScoredProductMatch] = []
 
 
+class PriorCallContext(BaseModel):
+    """Stores the last structured analytics call for multi-turn follow-ups."""
+
+    tool_name: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class PendingCallContext(BaseModel):
+    """Stores a pending tool call awaiting product disambiguation."""
+
+    tool_name: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    candidates: list[ScoredProductMatch] = Field(default_factory=list)
+
+
 class SessionContext(BaseModel):
     shop_id: Optional[UUID] = None
     product_id: Optional[UUID] = None
@@ -103,6 +133,8 @@ class SessionContext(BaseModel):
     error_count: int = 0
     last_activity: Optional[datetime] = None
     product_candidates: list[ScoredProductMatch] = []
+    last_analytics_call: Optional[PriorCallContext] = None
+    pending_analytics_call: Optional[PendingCallContext] = None
 
 
 class UserSession(BaseModel):
