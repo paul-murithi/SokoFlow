@@ -227,6 +227,45 @@ _MESSAGES: dict[MessageKey, dict[str, str]] = {
         "en": "No product sales were recorded for {period_name}.",
         "sw": "Hakuna mauzo ya bidhaa yaliyorekodiwa kwa {period_name}.",
     },
+    MessageKey.ANALYTICS_LOW_STOCK_ITEMS: {
+        "en": "⚠️ *Low Stock Alert* ({count} items):\n{items_summary}",
+        "sw": "⚠️ *Tahadhari ya Bidhaa Zinazoisha* (bidhaa {count}):\n{items_summary}",
+    },
+    MessageKey.ANALYTICS_LOW_STOCK_ITEMS_EMPTY: {
+        "en": "Good news! All products are well-stocked above their thresholds.",
+        "sw": "Habari njema! Bidhaa zote ziko juu ya kiwango cha tahadhari ya stoo.",
+    },
+    MessageKey.ANALYTICS_SALES_TREND: {
+        "en": (
+            "Sales trend for {period_name} vs {comparison_period_name}:\n"
+            "• Revenue: KES {current_revenue} (vs KES {previous_revenue}, {revenue_change})\n"
+            "• Transactions: {current_transactions} "
+            "(vs {previous_transactions}, {transaction_change})"
+        ),
+        "sw": (
+            "Mwenendo wa mauzo kwa {period_name} kulinganisha na {comparison_period_name}:\n"
+            "• Mapato: KES {current_revenue} "
+            "(kulinganisha na KES {previous_revenue}, {revenue_change})\n"
+            "• Miamala: {current_transactions} "
+            "(kulinganisha na {previous_transactions}, {transaction_change})"
+        ),
+    },
+    MessageKey.ANALYTICS_SALES_TREND_EMPTY: {
+        "en": "No sales activity recorded for {period_name} or the comparison period.",
+        "sw": "Hakuna mauzo yaliyorekodiwa kwa {period_name} au kipindi cha kulinganisha.",
+    },
+    MessageKey.ANALYTICS_SLOW_MOVING_ITEMS: {
+        "en": "Slow-moving products for {period_name} ({count} items):\n{items_summary}",
+        "sw": "Bidhaa zinazouza polepole kwa {period_name} (bidhaa {count}):\n{items_summary}",
+    },
+    MessageKey.ANALYTICS_SLOW_MOVING_ITEMS_EMPTY: {
+        "en": "Great news! No slow-moving items found for {period_name}.",
+        "sw": "Habari nzuri! Hakuna bidhaa zinazouza polepole kwa {period_name}.",
+    },
+    MessageKey.ANALYTICS_PRODUCT_PRICE: {
+        "en": "The price of *{product_name}* is *KES {price}* (SKU: {sku}).",
+        "sw": "Bei ya *{product_name}* ni *KES {price}* (SKU: {sku}).",
+    },
     MessageKey.ANALYTICS_INVALID_PROPOSAL: {
         "en": (
             "I didn't quite understand that question. "

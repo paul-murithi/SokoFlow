@@ -4,6 +4,7 @@ Pure function mapping typed AnalyticsOutcome objects to SokoFlow presentation co
 (MessageKey, message_params).
 """
 
+from decimal import Decimal
 from typing import Any
 
 from app.ai.contracts.outcome import AnalyticsOutcome, OutcomeType
@@ -113,6 +114,98 @@ def _format_top_products(outcome: AnalyticsOutcome) -> tuple[MessageKey, dict[st
     )
 
 
+def _format_low_stock_items(outcome: AnalyticsOutcome) -> tuple[MessageKey, dict[str, Any]]:
+    data = outcome.data
+    items = getattr(data, "items", None) or []
+    count = getattr(data, "count", len(items))
+
+    lines = [
+        f"• {item.product_name}: {item.current_stock} units left "
+        f"(threshold: {item.low_stock_threshold})"
+        for item in items[:10]
+    ]
+
+    return (
+        MessageKey.ANALYTICS_LOW_STOCK_ITEMS,
+        {
+            "count": count,
+            "items_summary": "\n".join(lines) if lines else "No items currently below threshold.",
+        },
+    )
+
+
+def _format_sales_trend(outcome: AnalyticsOutcome) -> tuple[MessageKey, dict[str, Any]]:
+    call_args = outcome.call.get("arguments", {}) if outcome.call else {}
+    period_name = _resolve_period_name(call_args)
+    comp_arg = call_args.get("comparison_period")
+    comparison_period_name = (
+        _resolve_period_name({"period": comp_arg}) if comp_arg else "previous equivalent period"
+    )
+
+    data = outcome.data
+    curr_rev = getattr(data, "current_period_revenue", Decimal("0.00"))
+    prev_rev = getattr(data, "previous_period_revenue", Decimal("0.00"))
+    rev_change = getattr(data, "revenue_change_percentage", 0.0)
+    curr_tx = getattr(data, "current_period_transactions", 0)
+    prev_tx = getattr(data, "previous_period_transactions", 0)
+    tx_change = getattr(data, "transaction_change_percentage", 0.0)
+
+    rev_sign = "+" if rev_change >= 0 else ""
+    tx_sign = "+" if tx_change >= 0 else ""
+
+    return (
+        MessageKey.ANALYTICS_SALES_TREND,
+        {
+            "period_name": period_name,
+            "comparison_period_name": comparison_period_name,
+            "current_revenue": f"{curr_rev:,.2f}",
+            "previous_revenue": f"{prev_rev:,.2f}",
+            "revenue_change": f"{rev_sign}{rev_change:.1f}%",
+            "current_transactions": curr_tx,
+            "previous_transactions": prev_tx,
+            "transaction_change": f"{tx_sign}{tx_change:.1f}%",
+        },
+    )
+
+
+def _format_slow_moving_items(outcome: AnalyticsOutcome) -> tuple[MessageKey, dict[str, Any]]:
+    call_args = outcome.call.get("arguments", {}) if outcome.call else {}
+    period_name = _resolve_period_name(call_args)
+    data = outcome.data
+    items = getattr(data, "items", None) or []
+    count = getattr(data, "count", len(items))
+
+    lines = [
+        f"• {item.product_name}: {item.units_sold} sold ({item.current_stock} in stock)"
+        for item in items[:10]
+    ]
+
+    return (
+        MessageKey.ANALYTICS_SLOW_MOVING_ITEMS,
+        {
+            "period_name": period_name,
+            "count": count,
+            "items_summary": "\n".join(lines) if lines else "No slow-moving products identified.",
+        },
+    )
+
+
+def _format_product_price(outcome: AnalyticsOutcome) -> tuple[MessageKey, dict[str, Any]]:
+    data = outcome.data
+    product_name = getattr(data, "product_name", "Product")
+    price = getattr(data, "unit_price", Decimal("0.00"))
+    sku = getattr(data, "sku", "N/A")
+
+    return (
+        MessageKey.ANALYTICS_PRODUCT_PRICE,
+        {
+            "product_name": product_name,
+            "price": f"{price:,.2f}",
+            "sku": sku,
+        },
+    )
+
+
 class AnalyticsFormatter:
     """Maps complete typed AnalyticsOutcome objects to (MessageKey, message_params)."""
 
@@ -127,6 +220,14 @@ class AnalyticsFormatter:
                     return _format_stock_level(outcome)
                 if outcome.tool == "get_top_products":
                     return _format_top_products(outcome)
+                if outcome.tool == "get_low_stock_items":
+                    return _format_low_stock_items(outcome)
+                if outcome.tool == "get_sales_trend":
+                    return _format_sales_trend(outcome)
+                if outcome.tool == "get_slow_moving_items":
+                    return _format_slow_moving_items(outcome)
+                if outcome.tool == "get_product_price":
+                    return _format_product_price(outcome)
                 return (
                     MessageKey.UNKNOWN_ERROR,
                     {"message": f"Tool '{outcome.tool}' executed successfully."},
@@ -139,6 +240,18 @@ class AnalyticsFormatter:
                 if outcome.tool == "get_top_products":
                     return (
                         MessageKey.ANALYTICS_TOP_PRODUCTS_EMPTY,
+                        {"period_name": period_name},
+                    )
+                if outcome.tool == "get_low_stock_items":
+                    return (MessageKey.ANALYTICS_LOW_STOCK_ITEMS_EMPTY, {})
+                if outcome.tool == "get_sales_trend":
+                    return (
+                        MessageKey.ANALYTICS_SALES_TREND_EMPTY,
+                        {"period_name": period_name},
+                    )
+                if outcome.tool == "get_slow_moving_items":
+                    return (
+                        MessageKey.ANALYTICS_SLOW_MOVING_ITEMS_EMPTY,
                         {"period_name": period_name},
                     )
                 return (
