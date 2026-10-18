@@ -7,7 +7,9 @@ import pytest
 from app.ai.contracts.period import PeriodType, RelativePeriod, ReportingPeriod
 from app.ai.contracts.tools import (
     GetLowStockItemsInput,
+    GetProductPriceInput,
     GetSalesSummaryInput,
+    GetSalesTrendInput,
     GetSlowMovingItemsInput,
     GetStockLevelInput,
     GetTopProductsInput,
@@ -16,10 +18,12 @@ from app.ai.contracts.tools import (
 from app.ai.errors import ProductNotFoundError
 from app.ai.handlers.sales_handlers import (
     handle_get_sales_summary,
+    handle_get_sales_trend,
     handle_get_top_products,
 )
 from app.ai.handlers.stock_handlers import (
     handle_get_low_stock_items,
+    handle_get_product_price,
     handle_get_slow_moving_items,
     handle_get_stock_level,
 )
@@ -170,3 +174,58 @@ async def test_handle_get_slow_moving_items_uses_sales_repository():
     assert result.items[0].product_id == product_id
     assert result.items[0].units_sold == 1
     mock_repo.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_handle_get_sales_trend():
+    mock_db = AsyncMock()
+    shop_id = uuid4()
+    period = ReportingPeriod(period_type=PeriodType.RELATIVE, relative_period=RelativePeriod.WEEK)
+
+    with patch(
+        "app.ai.handlers.sales_handlers.sales_repo.get_total_revenue_and_count"
+    ) as mock_repo:
+        mock_repo.side_effect = [
+            RevenueSummary(revenue=Decimal("20000.00"), transaction_count=50),
+            RevenueSummary(revenue=Decimal("10000.00"), transaction_count=25),
+        ]
+
+        result = await handle_get_sales_trend(
+            shop_id,
+            GetSalesTrendInput(period=period),
+            mock_db,
+        )
+
+        assert result.current_period_revenue == Decimal("20000.00")
+        assert result.previous_period_revenue == Decimal("10000.00")
+        assert result.revenue_change_percentage == 100.0
+        assert result.current_period_transactions == 50
+        assert result.previous_period_transactions == 25
+        assert result.transaction_change_percentage == 100.0
+
+
+@pytest.mark.asyncio
+async def test_handle_get_product_price_by_id():
+    mock_db = AsyncMock()
+    shop_id = uuid4()
+    product_id = uuid4()
+
+    product = Product(
+        id=product_id,
+        shop_id=shop_id,
+        name="Cooking Salt 1kg",
+        price=Decimal("50.00"),
+        sku="SALT-1KG",
+    )
+    mock_db.get.return_value = product
+
+    result = await handle_get_product_price(
+        shop_id,
+        GetProductPriceInput(product_id=product_id),
+        mock_db,
+    )
+
+    assert result.product_id == product_id
+    assert result.product_name == "Cooking Salt 1kg"
+    assert result.unit_price == Decimal("50.00")
+    assert result.sku == "SALT-1KG"

@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.contracts.tools import (
     GetLowStockItemsInput,
     GetLowStockItemsOutput,
+    GetProductPriceInput,
+    GetProductPriceOutput,
     GetSlowMovingItemsInput,
     GetSlowMovingItemsOutput,
     GetStockLevelInput,
@@ -132,3 +134,44 @@ async def handle_get_slow_moving_items(
     ]
 
     return GetSlowMovingItemsOutput(items=items, count=len(items))
+
+
+async def handle_get_product_price(
+    shop_id: UUID,
+    input_data: GetProductPriceInput,
+    db: AsyncSession,
+) -> GetProductPriceOutput:
+    """Retrieves selling price and SKU for a resolved product."""
+    nil_uuid = UUID("00000000-0000-0000-0000-000000000000")
+    product: Product | None = None
+
+    if input_data.product_id and input_data.product_id != nil_uuid:
+        product = await db.get(Product, input_data.product_id)
+        if product is None or product.shop_id != shop_id:
+            raise ProductNotFoundError(input_data.product_id)
+    elif input_data.product_name:
+        resolution = await product_resolver.resolve_product(
+            shop_id=shop_id,
+            search_term=input_data.product_name,
+            db=db,
+        )
+        if resolution.status == ProductResolutionStatus.EXACT_MATCH and resolution.product:
+            product = await db.get(Product, resolution.product.id)
+            if product is None or product.shop_id != shop_id:
+                raise ProductNotFoundError(input_data.product_name)
+        elif resolution.status == ProductResolutionStatus.AMBIGUOUS:
+            raise ProductAmbiguousError(
+                search_term=input_data.product_name,
+                candidates=resolution.candidates,
+            )
+        else:
+            raise ProductNotFoundError(input_data.product_name)
+    else:
+        raise ProductNotFoundError("Product identifier not provided")
+
+    return GetProductPriceOutput(
+        product_id=product.id,
+        product_name=product.name,
+        unit_price=product.price,
+        sku=product.sku,
+    )

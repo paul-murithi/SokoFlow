@@ -7,7 +7,13 @@ import pytest
 
 from app.ai.contracts.execution import ToolExecutionResult
 from app.ai.contracts.outcome import AnalyticsOutcome
-from app.ai.contracts.tools import GetSalesSummaryOutput, GetStockLevelOutput
+from app.ai.contracts.tools import (
+    GetLowStockItemsOutput,
+    GetProductPriceOutput,
+    GetSalesSummaryOutput,
+    GetStockLevelOutput,
+    LowStockItem,
+)
 from app.ai.executor import ToolExecutor
 from app.ai.formatter import AnalyticsFormatter
 from app.ai.orchestrator import AnalyticsOrchestrator
@@ -381,3 +387,131 @@ async def test_analytics_flow_provider_unavailable_does_not_increment_error(mock
     assert result.new_state == SessionState.IDLE
     assert session.context.error_count == 0
     assert result.message_key == MessageKey.ANALYTICS_PROVIDER_UNAVAILABLE
+
+
+@pytest.mark.asyncio
+async def test_analytics_flow_product_price_happy_path(mock_orchestrator):
+    shop_id = uuid4()
+    price_data = GetProductPriceOutput(
+        product_id=uuid4(),
+        product_name="Maize Flour 2kg",
+        unit_price=Decimal("195.00"),
+        sku="MF-2KG",
+    )
+    mock_orchestrator.run.return_value = AnalyticsOutcome.answered(
+        tool="get_product_price",
+        data=price_data,
+        call={"name": "get_product_price", "arguments": {"product_name": "Maize Flour 2kg"}},
+    )
+
+    flow = AnalyticsFlow(
+        db_session=object(),
+        orchestrator=mock_orchestrator,
+        formatter=AnalyticsFormatter(),
+    )
+    flow.get_shop_id = AsyncMock(return_value=shop_id)
+
+    session = UserSession(
+        phone="+254700000999",
+        state=SessionState.IDLE,
+        context=SessionContext(error_count=0),
+    )
+
+    result = await flow.handle_query(session, "How much is maize flour 2kg?")
+
+    assert result.new_state == SessionState.IDLE
+    assert result.message_key == MessageKey.ANALYTICS_PRODUCT_PRICE
+    assert result.message_params["product_name"] == "Maize Flour 2kg"
+    assert result.message_params["price"] == "195.00"
+    assert session.context.last_analytics_call.tool_name == "get_product_price"
+
+
+@pytest.mark.asyncio
+async def test_analytics_flow_low_stock_items_happy_path(mock_orchestrator):
+    shop_id = uuid4()
+    low_stock_data = GetLowStockItemsOutput(
+        items=[
+            LowStockItem(
+                product_id=uuid4(),
+                product_name="Milk 500ml",
+                current_stock=2,
+                low_stock_threshold=5,
+            )
+        ],
+        count=1,
+    )
+    mock_orchestrator.run.return_value = AnalyticsOutcome.answered(
+        tool="get_low_stock_items",
+        data=low_stock_data,
+        call={"name": "get_low_stock_items", "arguments": {}},
+    )
+
+    flow = AnalyticsFlow(
+        db_session=object(),
+        orchestrator=mock_orchestrator,
+        formatter=AnalyticsFormatter(),
+    )
+    flow.get_shop_id = AsyncMock(return_value=shop_id)
+
+    session = UserSession(
+        phone="+254700000999",
+        state=SessionState.IDLE,
+        context=SessionContext(),
+    )
+
+    result = await flow.handle_query(session, "Which items are running low on stock?")
+
+    assert result.new_state == SessionState.IDLE
+    assert result.message_key == MessageKey.ANALYTICS_LOW_STOCK_ITEMS
+    assert result.message_params["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_handle_product_selection_for_product_price(mock_orchestrator):
+    shop_id = uuid4()
+    product_id = uuid4()
+    candidate = ScoredProductMatch(
+        id=product_id,
+        shop_id=shop_id,
+        name="Maize Flour 2kg",
+        sku="MF-2KG",
+        price=Decimal("195.00"),
+        similarity_score=0.90,
+    )
+    price_data = GetProductPriceOutput(
+        product_id=product_id,
+        product_name="Maize Flour 2kg",
+        unit_price=Decimal("195.00"),
+        sku="MF-2KG",
+    )
+    mock_orchestrator.executor.execute.return_value = ToolExecutionResult(
+        status="success",
+        tool="get_product_price",
+        data=price_data,
+    )
+
+    flow = AnalyticsFlow(
+        db_session=object(),
+        orchestrator=mock_orchestrator,
+    )
+    flow.get_shop_id = AsyncMock(return_value=shop_id)
+
+    session = UserSession(
+        phone="+254700000999",
+        state=SessionState.ANALYTICS_PRODUCT_SELECTION,
+        context=SessionContext(
+            product_candidates=[candidate],
+            pending_analytics_call=PendingCallContext(
+                tool_name="get_product_price",
+                arguments={"product_name": "flour"},
+                candidates=[candidate],
+            ),
+        ),
+    )
+
+    result = await flow.handle_product_selection(session, "1")
+
+    assert result.new_state == SessionState.IDLE
+    assert result.message_key == MessageKey.ANALYTICS_PRODUCT_PRICE
+    assert session.context.last_analytics_call.tool_name == "get_product_price"
+    assert session.context.last_analytics_call.arguments["product_id"] == str(product_id)

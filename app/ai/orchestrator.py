@@ -33,6 +33,10 @@ DEFAULT_ACTIVE_TOOLS = (
     "get_sales_summary",
     "get_stock_level",
     "get_top_products",
+    "get_low_stock_items",
+    "get_sales_trend",
+    "get_slow_moving_items",
+    "get_product_price",
 )
 
 
@@ -210,4 +214,14 @@ class AnalyticsOrchestrator:
             units = getattr(data, "units", None)
             revenue = getattr(data, "revenue", None)
             return not units and not revenue
+        if tool_name == "get_low_stock_items":
+            return getattr(data, "count", 0) == 0 or not getattr(data, "items", None)
+        if tool_name == "get_slow_moving_items":
+            return getattr(data, "count", 0) == 0 or not getattr(data, "items", None)
+        if tool_name == "get_sales_trend":
+            curr_tx = getattr(data, "current_period_transactions", 0)
+            prev_tx = getattr(data, "previous_period_transactions", 0)
+            curr_rev = getattr(data, "current_period_revenue", 0)
+            prev_rev = getattr(data, "previous_period_revenue", 0)
+            return curr_tx == 0 and prev_tx == 0 and curr_rev == 0 and prev_rev == 0
         return False

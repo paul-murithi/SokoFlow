@@ -7,8 +7,14 @@ import pytest
 from app.ai.contracts.llm import LLMResponse, NormalizedToolCall
 from app.ai.contracts.outcome import OutcomeType
 from app.ai.contracts.tools import (
+    GetLowStockItemsOutput,
+    GetProductPriceOutput,
     GetSalesSummaryOutput,
+    GetSalesTrendOutput,
+    GetSlowMovingItemsOutput,
     GetTopProductsOutput,
+    LowStockItem,
+    SlowMovingItem,
 )
 from app.ai.errors import LLMProviderTimeoutError
 from app.ai.executor import ToolExecutionError, ToolExecutionResult, ToolExecutor
@@ -453,3 +459,136 @@ async def test_multi_turn_follow_up_passes_prior_context(mock_llm_client, mock_e
     assert "Previous tool executed: get_sales_summary" in messages_passed[0].content
     assert messages_passed[1].role == "user"
     assert messages_passed[1].content == "and yesterday?"
+
+
+@pytest.mark.asyncio
+async def test_answered_low_stock_items(mock_llm_client, mock_executor, mock_db):
+    shop_id = uuid4()
+    mock_llm_client.generate.return_value = LLMResponse(
+        text=None,
+        tool_calls=[NormalizedToolCall(name="get_low_stock_items", arguments={})],
+    )
+    items_data = GetLowStockItemsOutput(
+        items=[
+            LowStockItem(
+                product_id=uuid4(),
+                product_name="Sugar 1kg",
+                current_stock=2,
+                low_stock_threshold=5,
+            )
+        ],
+        count=1,
+    )
+    mock_executor.execute.return_value = ToolExecutionResult(
+        status="success", tool="get_low_stock_items", data=items_data
+    )
+
+    orchestrator = AnalyticsOrchestrator(
+        llm_client=mock_llm_client,
+        executor=mock_executor,
+    )
+
+    outcome = await orchestrator.run("What items are low on stock?", shop_id, mock_db)
+
+    assert outcome.outcome_type == OutcomeType.ANSWERED
+    assert outcome.tool == "get_low_stock_items"
+    assert outcome.data == items_data
+
+
+@pytest.mark.asyncio
+async def test_answered_sales_trend(mock_llm_client, mock_executor, mock_db):
+    shop_id = uuid4()
+    mock_llm_client.generate.return_value = LLMResponse(
+        text=None,
+        tool_calls=[NormalizedToolCall(name="get_sales_trend", arguments={"period": "this week"})],
+    )
+    trend_data = GetSalesTrendOutput(
+        current_period_revenue=Decimal("15000.00"),
+        previous_period_revenue=Decimal("10000.00"),
+        revenue_change_percentage=50.0,
+        current_period_transactions=30,
+        previous_period_transactions=20,
+        transaction_change_percentage=50.0,
+    )
+    mock_executor.execute.return_value = ToolExecutionResult(
+        status="success", tool="get_sales_trend", data=trend_data
+    )
+
+    orchestrator = AnalyticsOrchestrator(
+        llm_client=mock_llm_client,
+        executor=mock_executor,
+    )
+
+    outcome = await orchestrator.run("Am I selling more than last week?", shop_id, mock_db)
+
+    assert outcome.outcome_type == OutcomeType.ANSWERED
+    assert outcome.tool == "get_sales_trend"
+    assert outcome.data == trend_data
+
+
+@pytest.mark.asyncio
+async def test_answered_slow_moving_items(mock_llm_client, mock_executor, mock_db):
+    shop_id = uuid4()
+    mock_llm_client.generate.return_value = LLMResponse(
+        text=None,
+        tool_calls=[
+            NormalizedToolCall(name="get_slow_moving_items", arguments={"period": "this month"})
+        ],
+    )
+    slow_data = GetSlowMovingItemsOutput(
+        items=[
+            SlowMovingItem(
+                product_id=uuid4(),
+                product_name="Matchbox",
+                units_sold=0,
+                current_stock=50,
+                unit_price=Decimal("10.00"),
+            )
+        ],
+        count=1,
+    )
+    mock_executor.execute.return_value = ToolExecutionResult(
+        status="success", tool="get_slow_moving_items", data=slow_data
+    )
+
+    orchestrator = AnalyticsOrchestrator(
+        llm_client=mock_llm_client,
+        executor=mock_executor,
+    )
+
+    outcome = await orchestrator.run("What hasn't sold recently?", shop_id, mock_db)
+
+    assert outcome.outcome_type == OutcomeType.ANSWERED
+    assert outcome.tool == "get_slow_moving_items"
+    assert outcome.data == slow_data
+
+
+@pytest.mark.asyncio
+async def test_answered_product_price(mock_llm_client, mock_executor, mock_db):
+    shop_id = uuid4()
+    mock_llm_client.generate.return_value = LLMResponse(
+        text=None,
+        tool_calls=[
+            NormalizedToolCall(name="get_product_price", arguments={"product_name": "Maize Flour"})
+        ],
+    )
+    price_data = GetProductPriceOutput(
+        product_id=uuid4(),
+        product_name="Maize Flour",
+        unit_price=Decimal("195.00"),
+        sku="MF-2KG",
+    )
+    mock_executor.execute.return_value = ToolExecutionResult(
+        status="success", tool="get_product_price", data=price_data
+    )
+
+    orchestrator = AnalyticsOrchestrator(
+        llm_client=mock_llm_client,
+        executor=mock_executor,
+    )
+
+    outcome = await orchestrator.run("How much is maize flour?", shop_id, mock_db)
+
+    assert outcome.outcome_type == OutcomeType.ANSWERED
+    assert outcome.tool == "get_product_price"
+    assert outcome.data == price_data

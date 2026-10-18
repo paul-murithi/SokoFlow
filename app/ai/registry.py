@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.contracts.tools import (
     GetLowStockItemsInput,
     GetLowStockItemsOutput,
+    GetProductPriceInput,
+    GetProductPriceOutput,
     GetSalesSummaryInput,
     GetSalesSummaryOutput,
     GetSalesTrendInput,
@@ -34,6 +36,7 @@ from app.ai.handlers.sales_handlers import (
 )
 from app.ai.handlers.stock_handlers import (
     handle_get_low_stock_items,
+    handle_get_product_price,
     handle_get_slow_moving_items,
     handle_get_stock_level,
 )
@@ -191,6 +194,14 @@ def build_default_registry() -> ToolRegistry:
         input_model=GetSlowMovingItemsInput,
         output_model=GetSlowMovingItemsOutput,
         handler=handle_get_slow_moving_items,
+    )
+
+    registry.register_tool(
+        name="get_product_price",
+        description="Retrieves the unit selling price and SKU for a specific product name or ID.",
+        input_model=GetProductPriceInput,
+        output_model=GetProductPriceOutput,
+        handler=handle_get_product_price,
     )
 
     return registry
