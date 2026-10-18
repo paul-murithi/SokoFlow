@@ -170,3 +170,28 @@ class SlowMovingItem(BaseModel):
 class GetSlowMovingItemsOutput(BaseModel):
     items: list[SlowMovingItem]
     count: int
+
+
+# get_product_price
+class GetProductPriceInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    product_id: UUID | None = Field(
+        default=None, description="The resolved UUID of the product whose price is requested."
+    )
+    product_name: str | None = Field(
+        default=None, description="The product name if UUID is not known."
+    )
+
+    @model_validator(mode="after")
+    def validate_identifier_present(self) -> "GetProductPriceInput":
+        if self.product_id is None and not (self.product_name and self.product_name.strip()):
+            raise ValueError("Either product_id or product_name must be provided.")
+        return self
+
+
+class GetProductPriceOutput(BaseModel):
+    product_id: UUID
+    product_name: str
+    unit_price: Decimal
+    sku: str
