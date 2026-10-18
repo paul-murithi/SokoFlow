@@ -29,7 +29,7 @@ class IntentResolver:
         r"\bstock\s+lookup\b",
         r"\b(check|view|lookup|query|search|find|count|how\s+many|show|nataka|nipe)\b.*\b(stock|inventory|quantity|left|remaining|items)\b",
         r"\b(stock|inventory|quantity|remaining)\b.*\b(check|view|lookup|query|search|find|count|how\s+many|show|nataka|nipe)\b",
-        r"\b(stock|inventory)\b",
+        r"^(stock|inventory)$",
     )
 
     def resolve(self, text: str) -> Intent:
