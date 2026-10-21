@@ -3,7 +3,7 @@
 # Run `make help` to see all available commands.
 
 .PHONY: help infra infra-down up-full down logs shell \
-        test lint format typecheck \
+        test lint format typecheck benchmark \
         migrate migration simulate chaos clean
 
 # ── Default ──────────────────────────────────────────────────────
@@ -30,6 +30,7 @@ help:
 	@echo "  make lint               Run ruff check"
 	@echo "  make format             Run ruff format"
 	@echo "  make typecheck          Run mypy"
+	@echo "  make benchmark         Run the real-provider analytics latency benchmark"
 	@echo ""
 	@echo "DATABASE:"
 	@echo "  make migrate            Apply pending Alembic migrations"
@@ -82,6 +83,11 @@ simulate:
 
 chaos:
 	python tools/chaos_runner.py
+
+benchmark:
+	@test "$(BENCHMARK_ALLOW_LLM)" = "1" || (echo "Set BENCHMARK_ALLOW_LLM=1"; exit 2)
+	DATABASE_URL="$(TEST_DB_URL)" BENCHMARK_ALLOW_LLM=1 \
+		python -m tools.analytics_benchmark
 
 # ── Clean ─────────────────────────────────────────────────────────
 clean:

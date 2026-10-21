@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     analytics_enabled: bool = True
     analytics_follow_up_ttl_seconds: int = 600
 
+    # Benchmark
+    benchmark_allow_llm: bool = False
+
 
 # Singleton
 settings = Settings()

@@ -42,6 +42,44 @@ SokoFlow ships with an integrated chat simulator for local end-to-end testing wi
 
 ## 3. System Architecture & Visuals
 
+## Analytics latency benchmark
+
+The real-provider benchmark measures the integrated analytics path from
+`conversation()` entry through the formatted reply handed to a captured `send_text`
+boundary. It includes FSM routing, the LLM request, tool validation/execution, database
+queries, and localization. It excludes webhook parsing, Celery queue wait, and actual
+WhatsApp delivery. It runs sequentially and makes no WhatsApp calls.
+
+Prepare the dedicated test database and infrastructure, then run:
+
+```bash
+make infra
+make migrate DATABASE_URL="$TEST_DB_URL"
+BENCHMARK_ALLOW_LLM=1 TEST_DB_URL="$TEST_DB_URL" make benchmark
+```
+
+`BENCHMARK_ALLOW_LLM=1` is an explicit opt-in for provider calls. `TEST_DB_URL` must
+point to a dedicated local/test PostgreSQL database, and the runner refuses to continue
+unless `DATABASE_URL` exactly matches it, the application is not in production, an LLM
+key is configured, and the WhatsApp sender is not selected. The runner seeds an isolated
+benchmark shop and read-only analytics data when absent.
+
+Results are written to `benchmark-results/analytics-benchmark-report.json` and
+`benchmark-results/analytics-benchmark-measurements.csv`. The report contains successful
+response p50/p95/max, failed-request latency separately, valid sample counts,
+success/failure counts, failure stages, wrong-tool selections, timeouts, and per-tool
+breakdowns. Successful-response percentiles are `null` when there are no valid
+successful analytics responses; failed requests never contribute to them. Percentiles
+use linear interpolation over sorted measured latencies with inclusive endpoints.
+Each CSV row also records whether the provider request/response, tool execution, and
+formatted reply stages were reached. The runner resets only its dedicated Redis session
+before each run, and closes the application engine and Redis client before the event loop
+ends. The default seven measured requests and one warm-up request are deliberately small
+and are diagnostic only, not a statistically reliable production p95. Use `--warmup`,
+`--requests`, `--seed`, `--timeout`, and `--output-dir` with
+`python -m tools.analytics_benchmark` to configure a run. Real provider cost and rate
+limits apply.
+
 ### Diagram A: High-Level System Architecture
 
 ```mermaid
