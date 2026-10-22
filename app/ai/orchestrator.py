@@ -144,7 +144,10 @@ class AnalyticsOrchestrator:
             )
 
             if result.is_success:
-                call_info = {"name": tool_call.name, "arguments": tool_call.arguments}
+                call_info = {
+                    "name": tool_call.name,
+                    "arguments": result.validated_arguments or tool_call.arguments,
+                }
                 if self._is_result_empty(tool_call.name, result.data):
                     return AnalyticsOutcome.answered_empty(
                         tool=tool_call.name, data=result.data, call=call_info

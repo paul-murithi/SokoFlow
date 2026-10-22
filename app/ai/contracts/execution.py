@@ -39,6 +39,10 @@ class ToolExecutionResult(BaseModel):
     data: Any | None = Field(
         default=None, description="Structured domain output payload on success."
     )
+    validated_arguments: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Validated arguments used for execution on success.",
+    )
     error: ToolExecutionError | None = Field(
         default=None, description="Structured error details on failure."
     )

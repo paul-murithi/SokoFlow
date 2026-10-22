@@ -55,6 +55,7 @@ async def test_tool_executor_success():
     assert result.tool == "get_sales_summary"
     assert result.data.total_revenue == 1500
     assert result.data.transaction_count == 5
+    assert result.validated_arguments == raw_args
     assert result.error is None
     mock_handler.assert_called_once()
 

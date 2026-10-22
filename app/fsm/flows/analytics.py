@@ -155,7 +155,11 @@ class AnalyticsFlow(FSMPrimitives):
             )
 
         if result.is_success:
-            call_info = {"name": tool_name, "arguments": raw_args}
+            arguments = result.validated_arguments or raw_args
+            call_info = {
+                "name": tool_name,
+                "arguments": result.validated_arguments or raw_args,
+            }
             outcome = AnalyticsOutcome.answered(
                 tool=tool_name,
                 data=result.data,
@@ -163,7 +167,7 @@ class AnalyticsFlow(FSMPrimitives):
             )
             session.context.last_analytics_call = PriorCallContext(
                 tool_name=tool_name,
-                arguments=raw_args,
+                arguments=arguments,
             )
         else:
             error = result.error
