@@ -27,7 +27,6 @@ from app.fsm.models import (
 )
 from app.fsm.primitives import FSMPrimitives
 from app.fsm.routing_policy import AnalyticsRoutingPolicy
-from app.utils.errors import InvalidInputError
 
 logger = logging.getLogger(__name__)
 
@@ -71,13 +70,6 @@ class AnalyticsFlow(FSMPrimitives):
             )
 
         match outcome.outcome_type:
-            case OutcomeType.NO_ANALYTICS_INTENT:
-                # User was not understood: error counter increments
-                raise InvalidInputError(
-                    "Type 'add product', 'record sale', or 'check stock' to begin.",
-                    MessageKey.UNKNOWN_INTENT,
-                )
-
             case OutcomeType.NEEDS_SELECTION:
                 # Park session in ANALYTICS_PRODUCT_SELECTION
                 self._transition(session, SessionState.ANALYTICS_PRODUCT_SELECTION)
@@ -115,8 +107,8 @@ class AnalyticsFlow(FSMPrimitives):
                 )
 
             case _:
-                # Failures not caused by user confusion: error count not incremented
-                session.context.error_count = 0
+                # Neutral non-execution (zero tool calls) or technical/domain failures:
+                # Retain previous successful context, no incrementing error count
                 message_key, message_params = self.formatter.format_outcome(outcome)
                 return self._build_result(
                     previous_state=previous_state,
@@ -158,24 +150,34 @@ class AnalyticsFlow(FSMPrimitives):
             arguments = result.validated_arguments or raw_args
             call_info = {
                 "name": tool_name,
-                "arguments": result.validated_arguments or raw_args,
+                "arguments": arguments,
             }
-            outcome = AnalyticsOutcome.answered(
-                tool=tool_name,
-                data=result.data,
-                call=call_info,
-            )
+            if AnalyticsOrchestrator.is_result_empty(tool_name, result.data):
+                outcome = AnalyticsOutcome.answered_empty(
+                    tool=tool_name,
+                    data=result.data,
+                    call=call_info,
+                )
+            else:
+                outcome = AnalyticsOutcome.answered(
+                    tool=tool_name,
+                    data=result.data,
+                    call=call_info,
+                )
             session.context.last_analytics_call = PriorCallContext(
                 tool_name=tool_name,
                 arguments=arguments,
             )
         else:
             error = result.error
-            outcome = AnalyticsOutcome.domain_failure(
-                tool=tool_name,
-                error_type=error.error_type if error else "ExecutionFailure",
-                message=error.message if error else "Failed to execute tool",
-            )
+            if error and error.error_type == "InfrastructureError":
+                outcome = AnalyticsOutcome.infrastructure_failure(error.message)
+            else:
+                outcome = AnalyticsOutcome.domain_failure(
+                    tool=tool_name,
+                    error_type=error.error_type if error else "ExecutionFailure",
+                    message=error.message if error else "Failed to execute tool",
+                )
 
         session.context.pending_analytics_call = None
         session.context.product_candidates = []

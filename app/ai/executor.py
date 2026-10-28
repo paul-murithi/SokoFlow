@@ -108,7 +108,7 @@ class ToolExecutor:
                 status="success",
                 tool=tool_name,
                 data=domain_result,
-                validated_arguments=validated_input.model_dump(mode="json"),
+                validated_arguments=validated_input.model_dump(mode="json", exclude_none=True),
             )
         except DomainValidationError as exc:
             logger.warning(

@@ -16,6 +16,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.contracts.llm import LLMResponse, NormalizedToolCall
+from app.ai.errors import LLMProviderTimeoutError
 from app.ai.llm_client import LLMClient
 from app.core.config import settings
 from app.fsm.conversation_store import ConversationStore
@@ -309,3 +310,33 @@ async def test_roundtrip_disambiguation_choice(analytics_shop_data, monkeypatch)
     assert "Fresh Milk 1L" in reply2
     assert "KES 110.00" in reply2
     assert "FM-1000" in reply2
+
+
+@pytest.mark.asyncio
+async def test_roundtrip_zero_tool_calls_neutral_recovery(analytics_shop_data, monkeypatch):
+    """Verifies that an unhandled query with 0 tool calls returns generic recovery message."""
+    monkeypatch.setattr(settings, "groq_api_key", "test_key")
+    phone = analytics_shop_data["phone"]
+
+    with patch.object(LLMClient, "generate", new_callable=AsyncMock) as mock_gen:
+        mock_gen.return_value = LLMResponse(
+            text="I'm not sure which analytics tool to use.",
+            tool_calls=[],
+        )
+        reply = await conversation(make_inbound_payload(phone, "Tell me a story about Nairobi"))
+        assert "didn't quite understand" in reply.lower() or "ask about sales" in reply.lower()
+
+
+@pytest.mark.asyncio
+async def test_roundtrip_provider_failure_graceful_recovery(analytics_shop_data, monkeypatch):
+    """Verifies that an LLM provider timeout returns a temporary failure message
+
+    without crashing.
+    """
+    monkeypatch.setattr(settings, "groq_api_key", "test_key")
+    phone = analytics_shop_data["phone"]
+
+    with patch.object(LLMClient, "generate", new_callable=AsyncMock) as mock_gen:
+        mock_gen.side_effect = LLMProviderTimeoutError("Connection timed out after 30s")
+        reply = await conversation(make_inbound_payload(phone, "What were my sales today?"))
+        assert "trouble connecting" in reply.lower() or "try again shortly" in reply.lower()

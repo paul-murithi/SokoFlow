@@ -20,8 +20,10 @@ class OutcomeType(StrEnum):
     NO_ANALYTICS_INTENT = "no_analytics_intent"
     INVALID_PROPOSAL = "invalid_proposal"
     ARGUMENT_VALIDATION_FAILED = "argument_validation_failed"
+    MALFORMED_RESPONSE = "malformed_response"
     DOMAIN_FAILURE = "domain_failure"
     PROVIDER_UNAVAILABLE = "provider_unavailable"
+    INFRASTRUCTURE_FAILURE = "infrastructure_failure"
 
 
 class AnalyticsOutcome(BaseModel):
@@ -124,3 +126,21 @@ class AnalyticsOutcome(BaseModel):
     @classmethod
     def provider_unavailable(cls, message: str) -> "AnalyticsOutcome":
         return cls(outcome_type=OutcomeType.PROVIDER_UNAVAILABLE, message=message)
+
+    @classmethod
+    def malformed_response(cls, message: str) -> "AnalyticsOutcome":
+        return cls(outcome_type=OutcomeType.MALFORMED_RESPONSE, message=message)
+
+    @classmethod
+    def infrastructure_failure(
+        cls,
+        message: str,
+        error_type: str = "InfrastructureError",
+        details: dict[str, Any] | None = None,
+    ) -> "AnalyticsOutcome":
+        return cls(
+            outcome_type=OutcomeType.INFRASTRUCTURE_FAILURE,
+            error_type=error_type,
+            message=message,
+            details=details,
+        )

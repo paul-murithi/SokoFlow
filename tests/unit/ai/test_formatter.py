@@ -183,7 +183,19 @@ def test_format_needs_selection():
 def test_format_no_analytics_intent():
     outcome = AnalyticsOutcome.no_analytics_intent()
     key, params = AnalyticsFormatter.format_outcome(outcome)
-    assert key == MessageKey.UNKNOWN_INTENT
+    assert key == MessageKey.ANALYTICS_INVALID_PROPOSAL
+
+
+def test_format_malformed_response():
+    outcome = AnalyticsOutcome.malformed_response("Invalid JSON")
+    key, params = AnalyticsFormatter.format_outcome(outcome)
+    assert key == MessageKey.ANALYTICS_INVALID_PROPOSAL
+
+
+def test_format_infrastructure_failure():
+    outcome = AnalyticsOutcome.infrastructure_failure("DB connection lost")
+    key, params = AnalyticsFormatter.format_outcome(outcome)
+    assert key == MessageKey.ANALYTICS_INFRASTRUCTURE_ERROR
 
 
 def test_format_invalid_proposal():

@@ -16,7 +16,10 @@ from app.ai.contracts.tools import (
     LowStockItem,
     SlowMovingItem,
 )
-from app.ai.errors import LLMProviderTimeoutError
+from app.ai.errors import (
+    LLMProviderTimeoutError,
+    LLMResponseFormatError,
+)
 from app.ai.executor import ToolExecutionError, ToolExecutionResult, ToolExecutor
 from app.ai.llm_client import LLMClient
 from app.ai.orchestrator import AnalyticsOrchestrator
@@ -592,3 +595,111 @@ async def test_answered_product_price(mock_llm_client, mock_executor, mock_db):
     assert outcome.outcome_type == OutcomeType.ANSWERED
     assert outcome.tool == "get_product_price"
     assert outcome.data == price_data
+
+
+@pytest.mark.asyncio
+async def test_malformed_response_outcome_no_retry(mock_llm_client, mock_executor, mock_db):
+    shop_id = uuid4()
+    mock_llm_client.generate.side_effect = LLMResponseFormatError("Malformed JSON payload")
+
+    orchestrator = AnalyticsOrchestrator(
+        llm_client=mock_llm_client,
+        executor=mock_executor,
+    )
+
+    outcome = await orchestrator.run("How much did I sell today?", shop_id, mock_db)
+
+    assert outcome.outcome_type == OutcomeType.MALFORMED_RESPONSE
+    assert "Malformed JSON payload" in (outcome.message or "")
+    assert mock_llm_client.generate.call_count == 1
+    mock_executor.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_infrastructure_failure_from_executor(mock_llm_client, mock_executor, mock_db):
+    shop_id = uuid4()
+    mock_llm_client.generate.return_value = LLMResponse(
+        tool_calls=[NormalizedToolCall(name="get_sales_summary", arguments={"period": "today"})]
+    )
+    mock_executor.execute.return_value = ToolExecutionResult(
+        status="failure",
+        tool="get_sales_summary",
+        error=ToolExecutionError(
+            error_type="InfrastructureError",
+            message="Database connection lost",
+        ),
+    )
+
+    orchestrator = AnalyticsOrchestrator(
+        llm_client=mock_llm_client,
+        executor=mock_executor,
+    )
+
+    outcome = await orchestrator.run("Sales today?", shop_id, mock_db)
+
+    assert outcome.outcome_type == OutcomeType.INFRASTRUCTURE_FAILURE
+    assert "Database connection lost" in (outcome.message or "")
+    assert mock_llm_client.generate.call_count == 1
+    assert mock_executor.execute.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_schema_validation_exhaustion_preserves_details(
+    mock_llm_client, mock_executor, mock_db
+):
+    shop_id = uuid4()
+    resp = LLMResponse(
+        tool_calls=[NormalizedToolCall(name="get_sales_summary", arguments={"bad_arg": "invalid"})]
+    )
+    mock_llm_client.generate.side_effect = [resp, resp]
+
+    mock_executor.execute.return_value = ToolExecutionResult(
+        status="failure",
+        tool="get_sales_summary",
+        error=ToolExecutionError(
+            error_type="SchemaValidationError",
+            message="Validation error: extra field forbidden",
+            details={"field": "bad_arg"},
+        ),
+    )
+
+    orchestrator = AnalyticsOrchestrator(
+        llm_client=mock_llm_client,
+        executor=mock_executor,
+    )
+
+    outcome = await orchestrator.run("Sales today?", shop_id, mock_db)
+
+    assert outcome.outcome_type == OutcomeType.ARGUMENT_VALIDATION_FAILED
+    assert outcome.tool == "get_sales_summary"
+    assert "extra field forbidden" in (outcome.message or "")
+    assert outcome.details == {"field": "bad_arg"}
+    assert mock_llm_client.generate.call_count == 2
+    assert mock_executor.execute.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_domain_failure_no_llm_retry(mock_llm_client, mock_executor, mock_db):
+    shop_id = uuid4()
+    mock_llm_client.generate.return_value = LLMResponse(
+        tool_calls=[NormalizedToolCall(name="get_stock_level", arguments={"product_name": "Sugar"})]
+    )
+    mock_executor.execute.return_value = ToolExecutionResult(
+        status="failure",
+        tool="get_stock_level",
+        error=ToolExecutionError(
+            error_type="ProductNotFoundError",
+            message="Product not found",
+        ),
+    )
+
+    orchestrator = AnalyticsOrchestrator(
+        llm_client=mock_llm_client,
+        executor=mock_executor,
+    )
+
+    outcome = await orchestrator.run("How much sugar?", shop_id, mock_db)
+
+    assert outcome.outcome_type == OutcomeType.DOMAIN_FAILURE
+    assert mock_llm_client.generate.call_count == 1
+    assert mock_executor.execute.call_count == 1

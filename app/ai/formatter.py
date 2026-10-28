@@ -265,10 +265,12 @@ class AnalyticsFormatter:
                     {"candidates": [c.model_dump() for c in outcome.candidates]},
                 )
 
-            case OutcomeType.NO_ANALYTICS_INTENT:
-                return (MessageKey.UNKNOWN_INTENT, {})
-
-            case OutcomeType.INVALID_PROPOSAL | OutcomeType.ARGUMENT_VALIDATION_FAILED:
+            case (
+                OutcomeType.NO_ANALYTICS_INTENT
+                | OutcomeType.MALFORMED_RESPONSE
+                | OutcomeType.INVALID_PROPOSAL
+                | OutcomeType.ARGUMENT_VALIDATION_FAILED
+            ):
                 return (
                     MessageKey.ANALYTICS_INVALID_PROPOSAL,
                     {"message": outcome.message or ""},
@@ -284,3 +286,6 @@ class AnalyticsFormatter:
 
             case OutcomeType.PROVIDER_UNAVAILABLE:
                 return (MessageKey.ANALYTICS_PROVIDER_UNAVAILABLE, {})
+
+            case OutcomeType.INFRASTRUCTURE_FAILURE:
+                return (MessageKey.ANALYTICS_INFRASTRUCTURE_ERROR, {})

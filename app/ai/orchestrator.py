@@ -86,24 +86,32 @@ class AnalyticsOrchestrator:
         for attempt in range(2):
             try:
                 response = await self.llm_client.generate(messages=messages, tools=tools)
+            except LLMResponseFormatError as exc:
+                logger.warning("LLM response format error in orchestrator: %s", exc)
+                return AnalyticsOutcome.malformed_response(str(exc))
             except (
                 LLMProviderTimeoutError,
                 LLMProviderUnavailableError,
                 LLMProviderAPIError,
-                LLMResponseFormatError,
             ) as exc:
                 logger.warning("LLM provider error in orchestrator: %s", exc)
                 return AnalyticsOutcome.provider_unavailable(str(exc))
             except Exception as exc:
                 logger.exception("Unexpected error calling LLM provider: %s", exc)
-                return AnalyticsOutcome.provider_unavailable(str(exc))
+                return AnalyticsOutcome.infrastructure_failure(str(exc))
 
             if not response.has_tool_calls:
                 return AnalyticsOutcome.no_analytics_intent()
 
             if len(response.tool_calls) > 1:
                 if attempt == 0:
-                    messages.append(LLMMessage(role="assistant", content=None))
+                    tool_names = ", ".join(tc.name for tc in response.tool_calls)
+                    messages.append(
+                        LLMMessage(
+                            role="assistant",
+                            content=f"Proposed multiple tool calls: {tool_names}",
+                        )
+                    )
                     messages.append(
                         LLMMessage(
                             role="user",
@@ -120,7 +128,12 @@ class AnalyticsOrchestrator:
 
             if tool_call.name not in self.active_tools:
                 if attempt == 0:
-                    messages.append(LLMMessage(role="assistant", content=None))
+                    messages.append(
+                        LLMMessage(
+                            role="assistant",
+                            content=f"Proposed tool '{tool_call.name}'.",
+                        )
+                    )
                     messages.append(
                         LLMMessage(
                             role="user",
@@ -148,7 +161,7 @@ class AnalyticsOrchestrator:
                     "name": tool_call.name,
                     "arguments": result.validated_arguments or tool_call.arguments,
                 }
-                if self._is_result_empty(tool_call.name, result.data):
+                if self.is_result_empty(tool_call.name, result.data):
                     return AnalyticsOutcome.answered_empty(
                         tool=tool_call.name, data=result.data, call=call_info
                     )
@@ -162,7 +175,13 @@ class AnalyticsOrchestrator:
 
             if error.error_type == "SchemaValidationError":
                 if attempt == 0:
-                    messages.append(LLMMessage(role="assistant", content=None))
+                    args_summary = json.dumps(tool_call.arguments) if tool_call.arguments else "{}"
+                    messages.append(
+                        LLMMessage(
+                            role="assistant",
+                            content=f"Proposed {tool_call.name} with arguments {args_summary}",
+                        )
+                    )
                     messages.append(
                         LLMMessage(
                             role="user",
@@ -196,7 +215,7 @@ class AnalyticsOrchestrator:
                 )
 
             if error.error_type == "InfrastructureError":
-                return AnalyticsOutcome.provider_unavailable(error.message)
+                return AnalyticsOutcome.infrastructure_failure(error.message)
 
             return AnalyticsOutcome.domain_failure(
                 tool=tool_call.name,
@@ -208,7 +227,7 @@ class AnalyticsOrchestrator:
         return AnalyticsOutcome.invalid_proposal("Exhausted retry attempts.")
 
     @staticmethod
-    def _is_result_empty(tool_name: str, data: Any) -> bool:
+    def is_result_empty(tool_name: str, data: Any) -> bool:
         if tool_name == "get_sales_summary":
             rev = getattr(data, "total_revenue", 0)
             tx = getattr(data, "transaction_count", 0)

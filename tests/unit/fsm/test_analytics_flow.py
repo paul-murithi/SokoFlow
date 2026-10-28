@@ -30,7 +30,6 @@ from app.fsm.models import (
     UserSession,
 )
 from app.fsm.routing_policy import AnalyticsRoutingPolicy
-from app.utils.errors import InvalidInputError
 
 
 @pytest.fixture
@@ -80,7 +79,7 @@ async def test_analytics_flow_happy_path_answered(mock_orchestrator):
 
 
 @pytest.mark.asyncio
-async def test_analytics_flow_no_analytics_intent_raises_invalid_input(mock_orchestrator):
+async def test_analytics_flow_no_analytics_intent_returns_generic_recovery(mock_orchestrator):
     shop_id = uuid4()
     mock_orchestrator.run.return_value = AnalyticsOutcome.no_analytics_intent()
 
@@ -96,14 +95,15 @@ async def test_analytics_flow_no_analytics_intent_raises_invalid_input(mock_orch
         context=SessionContext(error_count=0),
     )
 
-    with pytest.raises(InvalidInputError) as exc_info:
-        await flow.handle_query(session, "Some random text")
+    result = await flow.handle_query(session, "Some random text")
 
-    assert exc_info.value.message_key == MessageKey.UNKNOWN_INTENT
+    assert result.new_state == SessionState.IDLE
+    assert result.message_key == MessageKey.ANALYTICS_INVALID_PROPOSAL
+    assert result.context.error_count == 0
 
 
 @pytest.mark.asyncio
-async def test_engine_process_message_no_analytics_intent_increments_error_count(
+async def test_engine_process_message_no_analytics_intent_neutral_outcome(
     mock_orchestrator, monkeypatch
 ):
     monkeypatch.setattr(settings, "groq_api_key", "test_key")
@@ -123,33 +123,39 @@ async def test_engine_process_message_no_analytics_intent_increments_error_count
     result = await engine.process_message(session, "random gibberish query")
 
     assert result.new_state == SessionState.IDLE
-    assert result.context.error_count == 1
-    assert result.message_key == MessageKey.UNKNOWN_INTENT
+    assert result.context.error_count == 0
+    assert result.message_key == MessageKey.ANALYTICS_INVALID_PROPOSAL
 
 
 @pytest.mark.asyncio
-async def test_engine_process_message_max_invalid_attempts_resets_to_idle(
+async def test_analytics_flow_preserves_last_analytics_call_on_failure(
     mock_orchestrator, monkeypatch
 ):
     monkeypatch.setattr(settings, "groq_api_key", "test_key")
     shop_id = uuid4()
-    mock_orchestrator.run.return_value = AnalyticsOutcome.no_analytics_intent()
+    mock_orchestrator.run.return_value = AnalyticsOutcome.invalid_proposal("Unknown tool")
 
-    engine = FSMEngine(db_session=object())
-    engine.analytics_flow.orchestrator = mock_orchestrator
-    engine.analytics_flow.get_shop_id = AsyncMock(return_value=shop_id)
+    flow = AnalyticsFlow(
+        db_session=object(),
+        orchestrator=mock_orchestrator,
+    )
+    flow.get_shop_id = AsyncMock(return_value=shop_id)
 
+    prior = PriorCallContext(
+        tool_name="get_sales_summary",
+        arguments={"period": {"period_type": "relative", "relative_period": "day"}},
+    )
     session = UserSession(
         phone="+254700000999",
         state=SessionState.IDLE,
-        context=SessionContext(error_count=2),  # Already 2 errors, max is 3
+        context=SessionContext(last_analytics_call=prior),
     )
 
-    result = await engine.process_message(session, "random gibberish query")
+    result = await flow.handle_query(session, "bad query")
 
     assert result.new_state == SessionState.IDLE
-    assert result.context.error_count == 0
-    assert result.message_key == MessageKey.TOO_MANY_INVALID
+    assert result.message_key == MessageKey.ANALYTICS_INVALID_PROPOSAL
+    assert session.context.last_analytics_call == prior
 
 
 @pytest.mark.asyncio

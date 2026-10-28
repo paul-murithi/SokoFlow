@@ -290,6 +290,12 @@ _MESSAGES: dict[MessageKey, dict[str, str]] = {
         "en": "{message}",
         "sw": "{message}",
     },
+    MessageKey.ANALYTICS_INFRASTRUCTURE_ERROR: {
+        "en": ("Information could not be retrieved right now. Please try again shortly."),
+        "sw": (
+            "Taarifa hazikuweza kupatikana kwa sasa. Tafadhali jaribu tena baada ya muda mfupi."
+        ),
+    },
 }
 
 
