@@ -40,9 +40,11 @@ class LLMResponse(BaseModel):
     tool_calls: list[NormalizedToolCall] = Field(
         default_factory=list, description="List of normalized tool calls requested by the model."
     )
-    prompt_tokens: int = Field(default=0, description="Number of prompt tokens consumed.")
-    completion_tokens: int = Field(default=0, description="Number of completion tokens consumed.")
-    cost_usd: float = Field(default=0.0, description="Calculated or reported query cost in USD.")
+    prompt_tokens: int | None = Field(default=None, description="Provider-reported prompt tokens.")
+    completion_tokens: int | None = Field(
+        default=None, description="Provider-reported completion tokens."
+    )
+    cost_usd: float | None = Field(default=None, description="Provider-reported cost in USD.")
     raw_response: dict[str, Any] | None = Field(
         default=None, description="Optional raw provider response payload for debugging/logging."
     )

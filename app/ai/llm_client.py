@@ -72,7 +72,7 @@ class LLMClient:
         tools: list[dict[str, Any]] | None = None,
         system_prompt: str | None = None,
         temperature: float = 0.0,
-        max_tokens: int = 256,
+        max_tokens: int | None = None,
     ) -> LLMResponse:
         """Sends messages and tools to the provider and returns a normalized LLMResponse.
 
@@ -91,11 +91,19 @@ class LLMClient:
         for msg in messages:
             payload_messages.append({"role": msg.role, "content": msg.content or ""})
 
+        input_chars = sum(len(message["content"]) for message in payload_messages)
+        if tools:
+            input_chars += len(json.dumps(tools, default=str))
+        if input_chars > settings.analytics_max_input_chars:
+            raise LLMResponseFormatError(
+                "Analytics provider input exceeds the configured size limit."
+            )
+
         payload: dict[str, Any] = {
             "model": self.model,
             "messages": payload_messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_tokens": max_tokens or settings.analytics_max_output_tokens,
             "stream": False,
         }
 
@@ -269,15 +277,15 @@ class LLMClient:
 
         # Usage and cost accounting
         usage = raw_payload.get("usage", {}) if isinstance(raw_payload, dict) else {}  # pyright: ignore[reportUnnecessaryIsInstance]
-        prompt_tokens = usage.get("prompt_tokens", 0) if isinstance(usage, dict) else 0
-        completion_tokens = usage.get("completion_tokens", 0) if isinstance(usage, dict) else 0
+        prompt_tokens = usage.get("prompt_tokens") if isinstance(usage, dict) else None
+        completion_tokens = usage.get("completion_tokens") if isinstance(usage, dict) else None
 
-        cost_usd = 0.0
+        cost_usd: float | None = None
         if isinstance(usage, dict) and "cost" in usage and usage["cost"] is not None:
             try:
                 cost_usd = float(usage["cost"])
             except (ValueError, TypeError):
-                cost_usd = 0.0
+                cost_usd = None
 
         return LLMResponse(
             text=text_content,

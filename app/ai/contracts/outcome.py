@@ -24,6 +24,7 @@ class OutcomeType(StrEnum):
     DOMAIN_FAILURE = "domain_failure"
     PROVIDER_UNAVAILABLE = "provider_unavailable"
     INFRASTRUCTURE_FAILURE = "infrastructure_failure"
+    GUARDRAIL_REJECTED = "guardrail_rejected"
 
 
 class AnalyticsOutcome(BaseModel):
@@ -143,4 +144,12 @@ class AnalyticsOutcome(BaseModel):
             error_type=error_type,
             message=message,
             details=details,
+        )
+
+    @classmethod
+    def guardrail_rejected(cls, reason: str) -> "AnalyticsOutcome":
+        return cls(
+            outcome_type=OutcomeType.GUARDRAIL_REJECTED,
+            error_type="GuardrailRejected",
+            message=reason,
         )

@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 30.0
     analytics_enabled: bool = True
     analytics_follow_up_ttl_seconds: int = 600
+    analytics_daily_quota: int = 100
+    analytics_max_output_tokens: int = 256
+    analytics_max_input_chars: int = 12000
 
     # Benchmark
     benchmark_allow_llm: bool = False

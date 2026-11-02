@@ -289,3 +289,7 @@ class AnalyticsFormatter:
 
             case OutcomeType.INFRASTRUCTURE_FAILURE:
                 return (MessageKey.ANALYTICS_INFRASTRUCTURE_ERROR, {})
+            case OutcomeType.GUARDRAIL_REJECTED:
+                if outcome.error_type == "RateLimitUnavailable":
+                    return (MessageKey.ANALYTICS_TEMPORARILY_UNAVAILABLE, {})
+                return (MessageKey.ANALYTICS_DAILY_LIMIT, {})
