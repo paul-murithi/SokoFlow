@@ -25,6 +25,26 @@ SokoFlow ships with an integrated chat simulator for local end-to-end testing wi
 - **Web UI Mode:** `http://localhost:3000` (provides a WhatsApp-like web interface to send messages and receive asynchronous bot replies & PDF reports).
 - **CLI Mode:** Interactive terminal prompt (`make simulate`).
 
+### Local demo data
+
+Prepares a known shop, products, and inventory for either simulator with:
+
+```bash
+make demo-seed
+```
+
+The demo shop uses the same phone as the web simulator: `DEFAULT_SIMULATOR_PHONE`
+when set, otherwise `WHATSAPP_PHONE_NUMBER_ID` (or `254712345678`). Running the
+command again resets only that marked demo shop, including any sales made during
+the demo. To remove it when finished:
+
+```bash
+make demo-clean
+```
+
+These commands refuse to run when `APP_ENV` is `production`. Run migrations first
+(`make migrate`) if the database has not been initialized.
+
 ---
 
 ## 2. Key Features

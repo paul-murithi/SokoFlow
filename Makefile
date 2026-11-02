@@ -4,7 +4,7 @@
 
 .PHONY: help infra infra-down up-full down logs shell \
         test lint format typecheck benchmark \
-        migrate migration simulate chaos clean
+        migrate migration simulate demo-seed demo-clean chaos clean
 
 # ── Default ──────────────────────────────────────────────────────
 help:
@@ -35,6 +35,8 @@ help:
 	@echo "DATABASE:"
 	@echo "  make migrate            Apply pending Alembic migrations"
 	@echo "  make migration m='msg'  Generate new migration"
+	@echo "  make demo-seed          Reset and seed the local simulator shop"
+	@echo "  make demo-clean         Remove the local simulator shop and its data"
 	@echo "─────────────────────────────────────────────────────────"
 
 # ── Infrastructure only ───────────────────────────────────────────
@@ -80,6 +82,12 @@ migration:
 # ── Simulator & chaos ─────────────────────────────────────────────
 simulate:
 	python tools/chat_simulator.py --phone $(p) --message "$(msg)"
+
+demo-seed:
+	python -m tools.demo_data seed
+
+demo-clean:
+	python -m tools.demo_data clean
 
 chaos:
 	python tools/chaos_runner.py
