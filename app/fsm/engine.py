@@ -3,7 +3,10 @@ from typing import Awaitable, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.interaction_logger import InteractionLogger
+from app.ai.rate_limiter import AnalyticsRateLimiter
 from app.core.config import settings
+from app.core.redis import get_redis
 from app.fsm.flows import AddProductFlow, AnalyticsFlow, RecordSaleFlow, StockLookupFlow
 from app.fsm.flows.generate_report import ReportFlow
 from app.fsm.intent_resolver import IntentResolver
@@ -25,7 +28,11 @@ class FSMEngine(FSMPrimitives):
         self.record_sale_flow = RecordSaleFlow(db_session=db_session)
         self.stock_lookup_flow = StockLookupFlow(db_session=db_session)
         self.generate_report_flow = ReportFlow(db_session=db_session)
-        self.analytics_flow = AnalyticsFlow(db_session=db_session)
+        self.analytics_flow = AnalyticsFlow(
+            db_session=db_session,
+            rate_limiter=AnalyticsRateLimiter(get_redis(), settings.analytics_daily_quota),
+            interaction_logger=InteractionLogger(settings.secret_key),
+        )
         self.routing_policy = AnalyticsRoutingPolicy()
         self._handler_map: dict[
             SessionState, Callable[[UserSession, str], Awaitable[FSMResult]]

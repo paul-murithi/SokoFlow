@@ -23,6 +23,7 @@ from app.ai.errors import (
     LLMResponseFormatError,
 )
 from app.ai.executor import ToolExecutor
+from app.ai.interaction_logger import InteractionTrace
 from app.ai.llm_client import LLMClient
 from app.ai.registry import ToolRegistry, default_registry
 from app.fsm.models import PriorCallContext, ScoredProductMatch
@@ -61,6 +62,7 @@ class AnalyticsOrchestrator:
         shop_id: UUID,
         db: AsyncSession,
         prior_context: PriorCallContext | None = None,
+        trace: InteractionTrace | None = None,
     ) -> AnalyticsOutcome:
         """Executes the analytics query orchestration loop and returns a typed AnalyticsOutcome."""
         messages: list[LLMMessage] = []
@@ -87,6 +89,8 @@ class AnalyticsOrchestrator:
             try:
                 response = await self.llm_client.generate(messages=messages, tools=tools)
             except LLMResponseFormatError as exc:
+                if trace:
+                    trace.record_failure(str(exc), repair=attempt > 0)
                 logger.warning("LLM response format error in orchestrator: %s", exc)
                 return AnalyticsOutcome.malformed_response(str(exc))
             except (
@@ -94,14 +98,32 @@ class AnalyticsOrchestrator:
                 LLMProviderUnavailableError,
                 LLMProviderAPIError,
             ) as exc:
+                if trace:
+                    trace.record_failure(str(exc), repair=attempt > 0)
                 logger.warning("LLM provider error in orchestrator: %s", exc)
                 return AnalyticsOutcome.provider_unavailable(str(exc))
             except Exception as exc:
+                if trace:
+                    trace.record_failure(str(exc), repair=attempt > 0)
                 logger.exception("Unexpected error calling LLM provider: %s", exc)
                 return AnalyticsOutcome.infrastructure_failure(str(exc))
 
             if not response.has_tool_calls:
+                if trace:
+                    trace.record_provider_attempt(
+                        response, result="no_tool_call", repair=attempt > 0
+                    )
                 return AnalyticsOutcome.no_analytics_intent()
+
+            if trace:
+                primary = response.primary_tool_call
+                trace.record_provider_attempt(
+                    response,
+                    proposed_tool=primary.name if primary else None,
+                    proposed_arguments=primary.arguments if primary else None,
+                    result="proposal",
+                    repair=attempt > 0,
+                )
 
             if len(response.tool_calls) > 1:
                 if attempt == 0:

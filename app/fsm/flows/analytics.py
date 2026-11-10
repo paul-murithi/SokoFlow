@@ -10,12 +10,18 @@ Adapts between the FSM conversation lifecycle and the Analytics Orchestrator.
 from __future__ import annotations
 
 import logging
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.contracts.outcome import AnalyticsOutcome, OutcomeType
 from app.ai.formatter import AnalyticsFormatter
+from app.ai.interaction_logger import InteractionLogger, InteractionTrace
 from app.ai.orchestrator import AnalyticsOrchestrator
+from app.ai.rate_limiter import (
+    AnalyticsRateLimiter,
+    RateLimitUnavailableError,
+)
 from app.core.config import settings
 from app.fsm.models import (
     FSMResult,
@@ -42,11 +48,15 @@ class AnalyticsFlow(FSMPrimitives):
         orchestrator: AnalyticsOrchestrator | None = None,
         formatter: AnalyticsFormatter | None = None,
         routing_policy: AnalyticsRoutingPolicy | None = None,
+        rate_limiter: AnalyticsRateLimiter | None = None,
+        interaction_logger: InteractionLogger | None = None,
     ) -> None:
         self.db_session = db_session
         self.orchestrator = orchestrator or AnalyticsOrchestrator()
         self.formatter = formatter or AnalyticsFormatter()
         self.routing_policy = routing_policy or AnalyticsRoutingPolicy()
+        self.rate_limiter = rate_limiter
+        self.interaction_logger = interaction_logger
 
     async def handle_query(self, session: UserSession, message_text: str) -> FSMResult:
         """Processes an analytics question from IDLE state."""
@@ -62,13 +72,22 @@ class AnalyticsFlow(FSMPrimitives):
                 else None
             )
 
-            outcome = await self.orchestrator.run(
-                message_text=message_text,
-                shop_id=shop_id,
-                db=db,
-                prior_context=prior_context,
-            )
+            trace = InteractionTrace(shop_id=shop_id, raw_query=message_text)
+            outcome = await self._run_guarded(message_text, shop_id, db, prior_context, trace)
+            if self.interaction_logger:
+                await self.interaction_logger.finalize(
+                    trace,
+                    outcome,
+                    db,
+                    guardrail_decision=(
+                        "rejected"
+                        if outcome.outcome_type is OutcomeType.GUARDRAIL_REJECTED
+                        else "allowed"
+                    ),
+                    guardrail_reason=outcome.error_type,
+                )
 
+        assert outcome is not None
         match outcome.outcome_type:
             case OutcomeType.NEEDS_SELECTION:
                 # Park session in ANALYTICS_PRODUCT_SELECTION
@@ -117,6 +136,45 @@ class AnalyticsFlow(FSMPrimitives):
                     message_params=message_params,
                 )
 
+    async def _run_guarded(
+        self,
+        message_text: str,
+        shop_id: UUID,
+        db: AsyncSession,
+        prior_context: PriorCallContext | None,
+        trace: InteractionTrace,
+    ) -> AnalyticsOutcome:
+        if self.rate_limiter:
+            try:
+                decision = await self.rate_limiter.admit(str(shop_id))
+            except RateLimitUnavailableError:
+                logger.exception("Analytics rate limiter unavailable for shop %s", shop_id)
+                return AnalyticsOutcome(
+                    outcome_type=OutcomeType.GUARDRAIL_REJECTED,
+                    error_type="RateLimitUnavailable",
+                    message="Analytics rate-limit infrastructure is unavailable.",
+                )
+            if not decision.allowed:
+                return AnalyticsOutcome(
+                    outcome_type=OutcomeType.GUARDRAIL_REJECTED,
+                    error_type="RateLimitExceeded",
+                    message="Daily analytics limit reached.",
+                )
+        if self.rate_limiter or self.interaction_logger:
+            return await self.orchestrator.run(
+                message_text=message_text,
+                shop_id=shop_id,
+                db=db,
+                prior_context=prior_context,
+                trace=trace,
+            )
+        return await self.orchestrator.run(
+            message_text=message_text,
+            shop_id=shop_id,
+            db=db,
+            prior_context=prior_context,
+        )
+
     async def handle_product_selection(self, session: UserSession, message_text: str) -> FSMResult:
         """Handles a disambiguation choice when parked in ANALYTICS_PRODUCT_SELECTION."""
         previous_state = session.state
@@ -139,45 +197,88 @@ class AnalyticsFlow(FSMPrimitives):
 
         async with self._get_db_session(db_session=self.db_session) as db:
             shop_id = await self.get_shop_id(db=db, sender=session.phone)
-            result = await self.orchestrator.executor.execute(
-                tool_name=tool_name,
-                raw_args=raw_args,
-                shop_id=shop_id,
-                db=db,
-            )
+            trace = InteractionTrace(shop_id=shop_id, raw_query=message_text)
+            outcome: AnalyticsOutcome | None = None
+            if self.rate_limiter:
+                try:
+                    decision = await self.rate_limiter.admit(str(shop_id))
+                except RateLimitUnavailableError:
+                    logger.exception("Analytics rate limiter unavailable for shop %s", shop_id)
+                    outcome = AnalyticsOutcome(
+                        outcome_type=OutcomeType.GUARDRAIL_REJECTED,
+                        error_type="RateLimitUnavailable",
+                        message="Analytics rate-limit infrastructure is unavailable.",
+                    )
+                else:
+                    outcome = (
+                        AnalyticsOutcome(
+                            outcome_type=OutcomeType.GUARDRAIL_REJECTED,
+                            error_type="RateLimitExceeded",
+                            message="Daily analytics limit reached.",
+                        )
+                        if not decision.allowed
+                        else None
+                    )
+            else:
+                outcome = None
 
-        if result.is_success:
-            arguments = result.validated_arguments or raw_args
-            call_info = {
-                "name": tool_name,
-                "arguments": arguments,
-            }
-            if AnalyticsOrchestrator.is_result_empty(tool_name, result.data):
-                outcome = AnalyticsOutcome.answered_empty(
-                    tool=tool_name,
-                    data=result.data,
-                    call=call_info,
+            if outcome is None:
+                result = await self.orchestrator.executor.execute(
+                    tool_name=tool_name,
+                    raw_args=raw_args,
+                    shop_id=shop_id,
+                    db=db,
+                )
+
+        if outcome is None:
+            if result.is_success:
+                arguments = result.validated_arguments or raw_args
+                call_info = {
+                    "name": tool_name,
+                    "arguments": arguments,
+                }
+                if AnalyticsOrchestrator.is_result_empty(tool_name, result.data):
+                    outcome = AnalyticsOutcome.answered_empty(
+                        tool=tool_name,
+                        data=result.data,
+                        call=call_info,
+                    )
+                else:
+                    outcome = AnalyticsOutcome.answered(
+                        tool=tool_name,
+                        data=result.data,
+                        call=call_info,
+                    )
+                session.context.last_analytics_call = PriorCallContext(
+                    tool_name=tool_name,
+                    arguments=arguments,
                 )
             else:
-                outcome = AnalyticsOutcome.answered(
-                    tool=tool_name,
-                    data=result.data,
-                    call=call_info,
-                )
-            session.context.last_analytics_call = PriorCallContext(
-                tool_name=tool_name,
-                arguments=arguments,
+                error = result.error
+                if error and error.error_type == "InfrastructureError":
+                    outcome = AnalyticsOutcome.infrastructure_failure(error.message)
+                else:
+                    outcome = AnalyticsOutcome.domain_failure(
+                        tool=tool_name,
+                        error_type=error.error_type if error else "ExecutionFailure",
+                        message=error.message if error else "Failed to execute tool",
+                    )
+
+        assert outcome is not None
+        if self.interaction_logger:
+            await self.interaction_logger.finalize(
+                trace,
+                outcome,
+                db,
+                guardrail_decision=(
+                    "rejected"
+                    if outcome.outcome_type is OutcomeType.GUARDRAIL_REJECTED
+                    else "allowed"
+                ),
+                guardrail_reason=outcome.error_type,
             )
-        else:
-            error = result.error
-            if error and error.error_type == "InfrastructureError":
-                outcome = AnalyticsOutcome.infrastructure_failure(error.message)
-            else:
-                outcome = AnalyticsOutcome.domain_failure(
-                    tool=tool_name,
-                    error_type=error.error_type if error else "ExecutionFailure",
-                    message=error.message if error else "Failed to execute tool",
-                )
+            if self.db_session is None:
+                await db.commit()
 
         session.context.pending_analytics_call = None
         session.context.product_candidates = []
