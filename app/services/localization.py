@@ -296,6 +296,14 @@ _MESSAGES: dict[MessageKey, dict[str, str]] = {
             "Taarifa hazikuweza kupatikana kwa sasa. Tafadhali jaribu tena baada ya muda mfupi."
         ),
     },
+    MessageKey.ANALYTICS_DAILY_LIMIT: {
+        "en": "You've reached today's analytics limit. Please try again tomorrow.",
+        "sw": "Umefikia kikomo cha takwimu cha leo. Tafadhali jaribu tena kesho.",
+    },
+    MessageKey.ANALYTICS_TEMPORARILY_UNAVAILABLE: {
+        "en": "Analytics is temporarily unavailable. Please try again shortly.",
+        "sw": "Takwimu hazipatikani kwa muda. Tafadhali jaribu tena baada ya muda mfupi.",
+    },
 }
 
 
