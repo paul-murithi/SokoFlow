@@ -32,7 +32,7 @@ class DateRange(BaseModel):
 
     @model_validator(mode="after")
     def validate_dates(self) -> "DateRange":
-        if self.start_date >= self.end_date:
+        if self.start_date > self.end_date:
             raise InvalidDateRangeError(
                 f"Start date ({self.start_date}) must be before end date ({self.end_date})."
             )
