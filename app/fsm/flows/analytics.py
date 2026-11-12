@@ -148,13 +148,17 @@ class AnalyticsFlow(FSMPrimitives):
             try:
                 decision = await self.rate_limiter.admit(str(shop_id))
             except RateLimitUnavailableError:
-                logger.exception("Analytics rate limiter unavailable for shop %s", shop_id)
+                # Redis is unavailable – fail closed
+                logger.exception(
+                    "Analytics rate limiter unavailable for shop %s – rejecting request",
+                    shop_id,
+                )
                 return AnalyticsOutcome(
                     outcome_type=OutcomeType.GUARDRAIL_REJECTED,
                     error_type="RateLimitUnavailable",
                     message="Analytics rate-limit infrastructure is unavailable.",
                 )
-            if not decision.allowed:
+            if decision is not None and not decision.allowed:  # TODO: Unnecessarry comparison?
                 return AnalyticsOutcome(
                     outcome_type=OutcomeType.GUARDRAIL_REJECTED,
                     error_type="RateLimitExceeded",

@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.interaction_logger import InteractionLogger
 from app.ai.rate_limiter import AnalyticsRateLimiter
 from app.core.config import settings
-from app.core.redis import get_redis
 from app.fsm.flows import AddProductFlow, AnalyticsFlow, RecordSaleFlow, StockLookupFlow
 from app.fsm.flows.generate_report import ReportFlow
 from app.fsm.intent_resolver import IntentResolver
@@ -21,16 +20,46 @@ OVERRIDE_COMMANDS = frozenset({"cancel", "menu", "exit", "stop"})
 class FSMEngine(FSMPrimitives):
     MAX_ERROR_ATTEMPTS = settings.max_fsm_errors
 
-    def __init__(self, db_session: AsyncSession | None = None) -> None:
+    def __init__(
+        self,
+        db_session: AsyncSession | None = None,
+        *,
+        rate_limiter_factory: Callable[[], AnalyticsRateLimiter] | None = None,
+    ) -> None:
         self.db = db_session
         self.intent_resolver = IntentResolver()
         self.add_product_flow = AddProductFlow(db_session=db_session)
         self.record_sale_flow = RecordSaleFlow(db_session=db_session)
         self.stock_lookup_flow = StockLookupFlow(db_session=db_session)
         self.generate_report_flow = ReportFlow(db_session=db_session)
+
+        # -----------------------------------------------------------------
+        # Rate‑limiter construction – production must always have a functional
+        # limiter.  The ``rate_limiter_factory`` argument is intended for tests
+        # that wish to inject a mock or explicitly opt‑out of rate‑limiting.
+        # -----------------------------------------------------------------
+        if rate_limiter_factory is None:
+            # Production path – a failure to create the limiter is fatal.
+            try:
+                from app.core.redis import make_redis_client
+
+                limiter = AnalyticsRateLimiter(
+                    make_redis_client(),
+                    settings.analytics_daily_quota,
+                )
+            except Exception as exc:  # pragma: no cover – exercised by a test
+                raise RuntimeError(
+                    """
+                        Cannot create a functional AnalyticsRateLimiter
+                        rate limiting is required for production.
+                    """
+                ) from exc
+        else:
+            limiter = rate_limiter_factory()
+
         self.analytics_flow = AnalyticsFlow(
             db_session=db_session,
-            rate_limiter=AnalyticsRateLimiter(get_redis(), settings.analytics_daily_quota),
+            rate_limiter=limiter,
             interaction_logger=InteractionLogger(settings.secret_key),
         )
         self.routing_policy = AnalyticsRoutingPolicy()
