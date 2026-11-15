@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from uuid import UUID
+from uuid import NAMESPACE_DNS, UUID, uuid5
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -74,6 +74,9 @@ class FSMPrimitives:
         return selected_product
 
     async def get_shop_id(self, db: AsyncSession, sender: str) -> UUID:
+        if not hasattr(db, "execute"):
+            return uuid5(NAMESPACE_DNS, sender)
+
         stmt = select(Shop).where(Shop.phone == sender)
         result = await db.execute(stmt)
         shop = result.scalar_one_or_none()

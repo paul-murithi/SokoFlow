@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable
 from dataclasses import dataclass
 from datetime import datetime
@@ -53,6 +54,20 @@ class AnalyticsRateLimiter:
         self.quota = quota
         self.key_prefix = key_prefix
         self._now = now
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+
+            async def ping_redis() -> None:
+                await self.redis.ping()
+
+            try:
+                asyncio.run(ping_redis())
+            except Exception as exc:
+                raise RateLimitUnavailableError(
+                    "Analytics rate-limit infrastructure is unavailable."
+                ) from exc
 
     def key_for(self, shop_id: str) -> str:
         date = (self._now or datetime.now(NAIROBI)).astimezone(NAIROBI).date()
