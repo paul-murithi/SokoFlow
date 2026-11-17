@@ -25,6 +25,9 @@ def event_loop_policy():
 @pytest.fixture(scope="session")
 async def engine():
     """Create a session-scoped engine with NullPool."""
+    assert settings.test_db_url is not None, (
+        "The test database URL must be set in the environment variables."
+    )
     engine = create_async_engine(
         settings.test_db_url,
         poolclass=NullPool,
