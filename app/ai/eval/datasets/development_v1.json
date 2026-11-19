@@ -1,0 +1,858 @@
+{
+  "version": "1.1.0",
+  "description": "Frozen headline evaluation dataset for SokoFlow AI Analytics (Phase 3 Week 5)",
+  "reference_time": "2026-11-03T10:00:00+03:00",
+  "timezone": "Africa/Nairobi",
+  "interactions": [
+    {
+      "interaction_id": "baseline_sales_summary",
+      "description": "Baseline daily sales summary inquiry",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_01",
+          "user_message": "How much did I sell today?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_sales_summary",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "day"
+            }
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "sales_summary",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Baseline single-turn sales query"
+        }
+      ]
+    },
+    {
+      "interaction_id": "baseline_stock_level",
+      "description": "Baseline inventory stock level inquiry for specific product",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_02",
+          "user_message": "What is my current stock for Sugar 1kg?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_stock_level",
+          "expected_arguments": {
+            "product_name": "Sugar 1kg"
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "stock_level",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Uses the supported product-name lookup contract"
+        }
+      ]
+    },
+    {
+      "interaction_id": "baseline_top_products",
+      "description": "Baseline ranking top products inquiry for this week",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_03",
+          "user_message": "What are my top selling products this week?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_top_products",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "week"
+            }
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "top_products",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Weekly top products query"
+        }
+      ]
+    },
+    {
+      "interaction_id": "baseline_low_stock",
+      "description": "Baseline low stock replenishment inquiry",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_04",
+          "user_message": "Show me products that are low on stock",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_low_stock_items",
+          "expected_arguments": {},
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "low_stock_items",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Tool takes no arguments (uses shop_id context)"
+        }
+      ]
+    },
+    {
+      "interaction_id": "baseline_sales_trend",
+      "description": "Baseline sales trend comparison inquiry",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_05",
+          "user_message": "Compare my sales this month with last month",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_sales_trend",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "month"
+            }
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "sales_trend",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Monthly trend query"
+        }
+      ]
+    },
+    {
+      "interaction_id": "baseline_slow_moving",
+      "description": "Baseline slow-moving inventory inquiry",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_06",
+          "user_message": "Which products have not been selling this month?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_slow_moving_items",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "month"
+            }
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "slow_moving_items",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Slow moving items query"
+        }
+      ]
+    },
+    {
+      "interaction_id": "baseline_product_price",
+      "description": "Baseline unit selling price inquiry",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_07",
+          "user_message": "What is the price of Cooking Oil 2L?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_product_price",
+          "expected_arguments": {
+            "product_name": "Cooking Oil 2L"
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "product_price",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Price lookup by product name"
+        }
+      ]
+    },
+    {
+      "interaction_id": "variation_sales_shorthand",
+      "description": "Conversational shorthand for daily sales",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_08",
+          "user_message": "Today's sales?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_sales_summary",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "day"
+            }
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "sales_summary",
+            "linguistic_complexity": "shorthand",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Shorthand query"
+        }
+      ]
+    },
+    {
+      "interaction_id": "variation_sales_swahili",
+      "description": "Swahili daily sales request",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_09",
+          "user_message": "Nipatie mauzo ya leo",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_sales_summary",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "day"
+            }
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "sales_summary",
+            "linguistic_complexity": "conversational",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Swahili merchant phrase"
+        }
+      ]
+    },
+    {
+      "interaction_id": "variation_stock_sheng",
+      "description": "Sheng/Swahili conversational stock check",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_10",
+          "user_message": "Sukari bado iko kwa duka?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_stock_level",
+          "expected_arguments": {
+            "product_name": "Sukari"
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "stock_level",
+            "linguistic_complexity": "conversational",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Conversational Swahili inquiry for Sukari stock"
+        }
+      ]
+    },
+    {
+      "interaction_id": "variation_sales_date_range",
+      "description": "Explicit ISO date range query",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_11",
+          "user_message": "Show sales between 2026-11-01 and 2026-11-03",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_sales_summary",
+          "expected_arguments": {
+            "period": {
+              "period_type": "date_range",
+              "date_range": {
+                "start_date": "2026-11-01",
+                "end_date": "2026-11-03"
+              }
+            }
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "sales_summary",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Half-open date range interval [2026-11-01, 2026-11-03)"
+        }
+      ]
+    },
+    {
+      "interaction_id": "variation_price_swahili",
+      "description": "Swahili price lookup for Unga",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_12",
+          "user_message": "Bei ya Unga ni ngapi?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_product_price",
+          "expected_arguments": {
+            "product_name": "Unga"
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "product_price",
+            "linguistic_complexity": "conversational",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Swahili price query"
+        }
+      ]
+    },
+    {
+      "interaction_id": "variation_trend_conversational",
+      "description": "Conversational sales trend query",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_13",
+          "user_message": "Are my sales trending upwards this week?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_sales_trend",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "week"
+            }
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "sales_trend",
+            "linguistic_complexity": "conversational",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Conversational question resolving to sales trend"
+        }
+      ]
+    },
+    {
+      "interaction_id": "failure_mode_greeting",
+      "description": "Casual greeting - should not trigger tool call",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_14",
+          "user_message": "Habari yako",
+          "expected_behavior": "non_execution",
+          "expected_tool": null,
+          "expected_arguments": null,
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "unsupported",
+            "linguistic_complexity": "conversational",
+            "expected_behavior": "non_execution",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "should_have_refused_but_executed"
+          },
+          "notes": "Greeting should produce conversational response without tools"
+        }
+      ]
+    },
+    {
+      "interaction_id": "failure_mode_weather",
+      "description": "Unrelated domain question (weather)",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_15",
+          "user_message": "What is the weather like in Nairobi today?",
+          "expected_behavior": "non_execution",
+          "expected_tool": null,
+          "expected_arguments": null,
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "unsupported",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "non_execution",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "should_have_refused_but_executed"
+          },
+          "notes": "Weather question is outside analytics scope"
+        }
+      ]
+    },
+    {
+      "interaction_id": "failure_mode_unsupported_operation",
+      "description": "Operational request outside AI tool registry (M-Pesa payment)",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_16",
+          "user_message": "Can you transfer 500 shillings to John via M-Pesa?",
+          "expected_behavior": "non_execution",
+          "expected_tool": null,
+          "expected_arguments": null,
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "unsupported",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "non_execution",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "unsupported_treated_as_supported"
+          },
+          "notes": "Non-existent payment capability"
+        }
+      ]
+    },
+    {
+      "interaction_id": "failure_mode_chitchat",
+      "description": "Chitchat request (joke)",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_17",
+          "user_message": "Tell me an interesting story",
+          "expected_behavior": "non_execution",
+          "expected_tool": null,
+          "expected_arguments": null,
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "unsupported",
+            "linguistic_complexity": "conversational",
+            "expected_behavior": "non_execution",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "should_have_refused_but_executed"
+          },
+          "notes": "General entertainment chitchat"
+        }
+      ]
+    },
+    {
+      "interaction_id": "failure_mode_typo_sales",
+      "description": "Phonetic typos in query text",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_18",
+          "user_message": "how mch sles tody",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_sales_summary",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "day"
+            }
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "sales_summary",
+            "linguistic_complexity": "typo",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "wrong_tool"
+          },
+          "notes": "Model must withstand heavy typographical errors"
+        }
+      ]
+    },
+    {
+      "interaction_id": "failure_mode_incomplete_sentence",
+      "description": "Fragmented shorthand query",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_19",
+          "user_message": "Top items",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_top_products",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "day"
+            }
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "top_products",
+            "linguistic_complexity": "shorthand",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "wrong_arguments"
+          },
+          "notes": "Defaults to day period for bare 'Top items'"
+        }
+      ]
+    },
+    {
+      "interaction_id": "failure_mode_ambiguous_intent",
+      "description": "Linguistically ambiguous query across multiple domains",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_20",
+          "user_message": "How is my business doing?",
+          "expected_behavior": "non_execution",
+          "expected_tool": null,
+          "expected_arguments": null,
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "unsupported",
+            "linguistic_complexity": "ambiguous",
+            "expected_behavior": "non_execution",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "wrong_tool"
+          },
+          "notes": "Requires conversational clarification rather than guessing a tool"
+        }
+      ]
+    },
+    {
+      "interaction_id": "combination_top_products_units",
+      "description": "Top products filtered by units and explicit limit",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_21",
+          "user_message": "Which 5 products sold the most units this month?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_top_products",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "month"
+            },
+            "limit": 5,
+            "ranking_dimension": "units"
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "top_products",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "wrong_arguments"
+          },
+          "notes": "Combination: limit=5, ranking_dimension=units"
+        }
+      ]
+    },
+    {
+      "interaction_id": "combination_top_products_revenue",
+      "description": "Top products filtered by revenue and explicit limit",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_22",
+          "user_message": "Show my top 3 items by revenue this week",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_top_products",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "week"
+            },
+            "limit": 3,
+            "ranking_dimension": "revenue"
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "top_products",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "wrong_arguments"
+          },
+          "notes": "Combination: limit=3, ranking_dimension=revenue"
+        }
+      ]
+    },
+    {
+      "interaction_id": "combination_low_stock_urgent",
+      "description": "Conversational urgency for low stock",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_23",
+          "user_message": "Which items are urgently running out of stock?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_low_stock_items",
+          "expected_arguments": {},
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "low_stock_items",
+            "linguistic_complexity": "conversational",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "wrong_tool"
+          },
+          "notes": "Urgent inventory check"
+        }
+      ]
+    },
+    {
+      "interaction_id": "combination_sales_year",
+      "description": "Annual sales inquiry",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_24",
+          "user_message": "What were my total sales throughout this year?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_sales_summary",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "year"
+            }
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "sales_summary",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "wrong_arguments"
+          },
+          "notes": "Year relative period"
+        }
+      ]
+    },
+    {
+      "interaction_id": "combination_product_price_shorthand",
+      "description": "Price query with shorthand phrasing",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_25",
+          "user_message": "How much does Rice 5kg cost?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_product_price",
+          "expected_arguments": {
+            "product_name": "Rice 5kg"
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "product_price",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "wrong_tool"
+          },
+          "notes": "Price inquiry for Rice 5kg"
+        }
+      ]
+    },
+    {
+      "interaction_id": "combination_slow_moving_zero_sales",
+      "description": "Slow-moving query with explicit zero sales condition",
+      "provenance": "human_reviewed",
+      "mode": "isolated",
+      "turns": [
+        {
+          "turn_id": "turn_26",
+          "user_message": "Which items had zero sales this month?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_slow_moving_items",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "month"
+            },
+            "max_sales_count": 0
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "slow_moving_items",
+            "linguistic_complexity": "conversational",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "single_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "wrong_arguments"
+          },
+          "notes": "Slow moving with max_sales_count=0"
+        }
+      ]
+    },
+    {
+      "interaction_id": "multiturn_sales_followup",
+      "description": "Multi-turn sales follow-up comparing this week then last week",
+      "provenance": "human_reviewed",
+      "mode": "chained",
+      "turns": [
+        {
+          "turn_id": "turn_27",
+          "user_message": "Show me my sales this week.",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_sales_summary",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "week"
+            }
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "sales_summary",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "multi_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Initial turn establishing sales context"
+        },
+        {
+          "turn_id": "turn_28",
+          "user_message": "And last week?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_sales_summary",
+          "expected_arguments": {
+            "period": {
+              "period_type": "relative",
+              "relative_period": "week",
+              "period_offset": -1
+            }
+          },
+          "prior_context": {
+            "tool_name": "get_sales_summary",
+            "arguments": {
+              "period": {
+                "period_type": "relative",
+                "relative_period": "week"
+              }
+            }
+          },
+          "classifications": {
+            "business_capability": "sales_summary",
+            "linguistic_complexity": "conversational",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "multi_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "wrong_arguments"
+          },
+          "notes": "Follow-up requests the calendar week immediately before this week"
+        }
+      ]
+    },
+    {
+      "interaction_id": "multiturn_stock_and_price",
+      "description": "Multi-turn stock inquiry followed by price check for Maize Flour",
+      "provenance": "human_reviewed",
+      "mode": "chained",
+      "turns": [
+        {
+          "turn_id": "turn_29",
+          "user_message": "Check stock for Maize Flour 2kg.",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_stock_level",
+          "expected_arguments": {
+            "product_name": "Maize Flour 2kg"
+          },
+          "prior_context": null,
+          "classifications": {
+            "business_capability": "stock_level",
+            "linguistic_complexity": "direct",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "multi_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "none"
+          },
+          "notes": "Initial product stock inquiry"
+        },
+        {
+          "turn_id": "turn_30",
+          "user_message": "What is its price?",
+          "expected_behavior": "tool_invocation",
+          "expected_tool": "get_product_price",
+          "expected_arguments": {
+            "product_name": "Maize Flour 2kg"
+          },
+          "prior_context": {
+            "tool_name": "get_stock_level",
+            "arguments": {
+              "product_name": "Maize Flour 2kg"
+            }
+          },
+          "classifications": {
+            "business_capability": "product_price",
+            "linguistic_complexity": "conversational",
+            "expected_behavior": "tool_invocation",
+            "interaction_type": "multi_turn",
+            "repair_expectation": "none",
+            "targeted_failure_class": "wrong_tool"
+          },
+          "notes": "Context-dependent pronoun resolution ('its price')"
+        }
+      ]
+    }
+  ]
+}
