@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # Database
     database_url: str
     test_db_url: str | None = None
+    benchmark_db_url: str | None = None
 
     # Redis
     redis_url: str

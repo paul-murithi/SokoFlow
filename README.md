@@ -44,6 +44,9 @@ make demo-clean
 
 These commands refuse to run when `APP_ENV` is `production`. Run migrations first
 (`make migrate`) if the database has not been initialized.
+The demo seed, API, and worker use `DATABASE_URL`. `TEST_DB_URL` is reserved for
+automated tests (whose fixtures drop their schema), and the integrated analytics
+benchmark uses its own `BENCHMARK_DB_URL`.
 
 ---
 
@@ -70,19 +73,25 @@ boundary. It includes FSM routing, the LLM request, tool validation/execution, d
 queries, and localization. It excludes webhook parsing, Celery queue wait, and actual
 WhatsApp delivery. It runs sequentially and makes no WhatsApp calls.
 
-Prepare the dedicated test database and infrastructure, then run:
+Prepare the dedicated benchmark database and infrastructure, then run:
 
 ```bash
 make infra
-make migrate DATABASE_URL="$TEST_DB_URL"
-BENCHMARK_ALLOW_LLM=1 TEST_DB_URL="$TEST_DB_URL" make benchmark
+BENCHMARK_ALLOW_LLM=1 make benchmark \
+  BENCHMARK_DB_URL=postgresql+asyncpg://sokoflow:sokoflow_dev@localhost:5432/sokoflow_benchmark
 ```
 
-`BENCHMARK_ALLOW_LLM=1` is an explicit opt-in for provider calls. `TEST_DB_URL` must
-point to a dedicated local/test PostgreSQL database, and the runner refuses to continue
-unless `DATABASE_URL` exactly matches it, the application is not in production, an LLM
-key is configured, and the WhatsApp sender is not selected. The runner seeds an isolated
-benchmark shop and read-only analytics data when absent.
+Create the database named by `BENCHMARK_DB_URL` in PostgreSQL before the first run; the
+target applies Alembic migrations to it, including the `pg_trgm` extension required by
+the current integrated benchmark path. It verifies the benchmark database is distinct
+from `DATABASE_URL` and `TEST_DB_URL`, then uses it as `DATABASE_URL` only for the
+benchmark process. Normal demo processes continue using `DATABASE_URL`.
+
+`BENCHMARK_ALLOW_LLM=1` is an explicit opt-in for provider calls. The runner refuses to
+continue when `APP_ENV` is production, an LLM key is not configured, or the WhatsApp
+sender is selected. The runner seeds an isolated benchmark shop and analytics data when
+absent. To pass options such as `--requests` or `--warmup`, set `BENCHMARK_ARGS` on the
+Make command; it still performs the database checks and migrations.
 
 Results are written to `benchmark-results/analytics-benchmark-report.json` and
 `benchmark-results/analytics-benchmark-measurements.csv`. The report contains successful
@@ -96,8 +105,8 @@ formatted reply stages were reached. The runner resets only its dedicated Redis 
 before each run, and closes the application engine and Redis client before the event loop
 ends. The default seven measured requests and one warm-up request are deliberately small
 and are diagnostic only, not a statistically reliable production p95. Use `--warmup`,
-`--requests`, `--seed`, `--timeout`, and `--output-dir` with
-`python -m tools.analytics_benchmark` to configure a run. Real provider cost and rate
+`--requests`, `--seed`, `--timeout`, and `--output-dir` via
+`BENCHMARK_ARGS` on `make benchmark` to configure a run. Real provider cost and rate
 limits apply.
 
 ### Diagram A: High-Level System Architecture
@@ -532,17 +541,19 @@ sokoflow/
 
 ## 11. Configuration & Environment Variables
 
-| Variable                | Description                                                             | Default / Example                                                    |
-| :---------------------- | :---------------------------------------------------------------------- | :------------------------------------------------------------------- |
-| `APP_ENV`               | Application execution environment (`development`, `test`, `production`) | `development`                                                        |
-| `DATABASE_URL`          | PostgreSQL connection string (asyncpg driver)                           | `postgresql+asyncpg://sokoflow:sokoflow_dev@localhost:5432/sokoflow` |
-| `REDIS_URL`             | Redis instance URL for FSM session caching                              | `redis://localhost:6379/0`                                           |
-| `CELERY_BROKER_URL`     | Redis URL for Celery task broker                                        | `redis://localhost:6379/1`                                           |
-| `SESSION_TTL_SECONDS`   | Inactivity TTL for conversational FSM sessions                          | `1800` (30 mins)                                                     |
-| `DEDUP_TTL_SECONDS`     | Inactivity TTL for webhook message deduplication                        | `60` (1 min)                                                         |
-| `MAX_FSM_ERRORS`        | Max invalid consecutive inputs before resetting FSM state to IDLE       | `3`                                                                  |
-| `SENDER_BACKEND`        | Transport backend adapter (`mock` for simulator, `whatsapp` stub)       | `mock`                                                               |
-| `MESSAGE_SENDER_URL`    | Outbound callback endpoint for mock delivery                            | `http://localhost:3000`                                              |
+| Variable               | Description                                                              | Default / Example                                                               |
+| :--------------------- | :----------------------------------------------------------------------- | :----------------------------------------------------------------------------- |
+| `APP_ENV`              | Application execution environment (`development`, `test`, `production`) | `development`                                                                   |
+| `DATABASE_URL`         | PostgreSQL connection string for the app and demo data                   | `postgresql+asyncpg://sokoflow:sokoflow_dev@localhost:5432/sokoflow`            |
+| `TEST_DB_URL`          | Isolated PostgreSQL database for automated tests                         | `postgresql+asyncpg://sokoflow:sokoflow_dev@localhost:5432/sokoflow_test_1`    |
+| `BENCHMARK_DB_URL`     | Isolated PostgreSQL database for the integrated analytics benchmark     | `postgresql+asyncpg://sokoflow:sokoflow_dev@localhost:5432/sokoflow_benchmark` |
+| `REDIS_URL`            | Redis instance URL for FSM session caching                               | `redis://localhost:6379/0`                                                      |
+| `CELERY_BROKER_URL`    | Redis URL for Celery task broker                                         | `redis://localhost:6379/1`                                                      |
+| `SESSION_TTL_SECONDS`  | Inactivity TTL for conversational FSM sessions                           | `1800` (30 mins)                                                                |
+| `DEDUP_TTL_SECONDS`    | Inactivity TTL for webhook message deduplication                        | `60` (1 min)                                                                    |
+| `MAX_FSM_ERRORS`       | Max invalid consecutive inputs before resetting FSM state to IDLE        | `3`                                                                             |
+| `SENDER_BACKEND`       | Transport backend adapter (`mock` for simulator, `whatsapp` stub)        | `mock`                                                                          |
+| `MESSAGE_SENDER_URL`   | Outbound callback endpoint for mock delivery                             | `http://localhost:3000`                                                        |
 | `WHATSAPP_APP_SECRET`   | Secret key used for HMAC SHA-256 webhook signature verification         | _(Set in `.env`)_                                                    |
 | `WHATSAPP_VERIFY_TOKEN` | Verification token for WhatsApp webhook handshake                       | _(Set in `.env`)_                                                    |
 

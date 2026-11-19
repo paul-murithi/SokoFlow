@@ -120,12 +120,57 @@ async def test_cleanup_closes_resources_while_loop_is_running(monkeypatch):
     redis_close.assert_awaited_once()
 
 
-def test_safety_gate_requires_explicit_test_database_and_opt_in(monkeypatch):
-    monkeypatch.delenv("BENCHMARK_ALLOW_LLM", raising=False)
-    monkeypatch.setattr(settings, "benchmark_allow_llm", False)
+def _set_safe_benchmark_settings(monkeypatch):
+    monkeypatch.setattr(settings, "benchmark_allow_llm", True)
     monkeypatch.setattr(settings, "app_env", "development")
     monkeypatch.setattr(settings, "test_db_url", "postgresql+asyncpg://localhost/test")
-    monkeypatch.setattr(settings, "database_url", "postgresql+asyncpg://localhost/production")
+    monkeypatch.setattr(
+        settings,
+        "benchmark_db_url",
+        "postgresql+asyncpg://localhost/benchmark",
+    )
+    monkeypatch.setattr(settings, "database_url", "postgresql+asyncpg://localhost/demo")
+    monkeypatch.setattr(settings, "sender_backend", "mock")
+    monkeypatch.setattr(settings, "groq_api_key", "test-key")
+    monkeypatch.setattr(settings, "openrouter_api_key", None)
+
+
+def test_safety_gate_requires_separate_benchmark_database(monkeypatch):
+    _set_safe_benchmark_settings(monkeypatch)
+
+    from tools.analytics_benchmark import _require_safe_environment
+
+    _require_safe_environment(preflight=True)
+
+    monkeypatch.setattr(settings, "database_url", settings.benchmark_db_url)
+    _require_safe_environment()
+
+
+def test_safety_gate_rejects_benchmark_database_shared_with_demo_or_tests(monkeypatch):
+    _set_safe_benchmark_settings(monkeypatch)
+
+    from tools.analytics_benchmark import _require_safe_environment
+
+    monkeypatch.setattr(settings, "benchmark_db_url", settings.database_url)
+    with pytest.raises(RuntimeError, match="separate from DATABASE_URL"):
+        _require_safe_environment(preflight=True)
+
+    monkeypatch.setattr(settings, "benchmark_db_url", settings.test_db_url)
+    with pytest.raises(RuntimeError, match="separate from TEST_DB_URL"):
+        _require_safe_environment(preflight=True)
+
+
+def test_safety_gate_requires_runtime_to_use_benchmark_database(monkeypatch):
+    _set_safe_benchmark_settings(monkeypatch)
+
+    from tools.analytics_benchmark import _require_safe_environment
+
+    with pytest.raises(RuntimeError, match="DATABASE_URL must point to BENCHMARK_DB_URL"):
+        _require_safe_environment()
+
+
+def test_safety_gate_still_requires_explicit_opt_in(monkeypatch):
+    monkeypatch.setattr(settings, "benchmark_allow_llm", False)
 
     from tools.analytics_benchmark import _require_safe_environment
 

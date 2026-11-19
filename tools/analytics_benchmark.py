@@ -1,7 +1,8 @@
 """Real-provider benchmark for the integrated analytics conversation path.
 
-Run this module with DATABASE_URL explicitly set to TEST_DB_URL and
-BENCHMARK_ALLOW_LLM=1. It never sends a WhatsApp message.
+Run `make benchmark` with BENCHMARK_DB_URL and BENCHMARK_ALLOW_LLM=1.
+The benchmark target migrates and selects the dedicated benchmark database.
+It never sends a WhatsApp message.
 """
 
 from __future__ import annotations
@@ -23,6 +24,8 @@ from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import select
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
 
 from app.ai.contracts.llm import LLMResponse
 from app.ai.executor import ToolExecutor
@@ -122,20 +125,41 @@ def percentile(values: list[float], percentage: float) -> float | None:
     return ordered[lower] + (ordered[upper] - ordered[lower]) * fraction
 
 
-def _require_safe_environment() -> None:
+def _database_target(database_url: str, setting_name: str) -> tuple[str, int, str]:
+    try:
+        url = make_url(database_url)
+        if not url.database:
+            raise RuntimeError(f"{setting_name} must include a database name.")
+        return ((url.host or "").casefold(), url.port or 5432, url.database)
+    except (ArgumentError, ValueError) as exc:
+        raise RuntimeError(f"{setting_name} must be a valid database URL.") from exc
+
+
+def _require_safe_environment(*, preflight: bool = False) -> None:
     if not settings.benchmark_allow_llm:
         raise RuntimeError(
             "Refusing to run: set BENCHMARK_ALLOW_LLM=1 to explicitly allow real provider calls."
         )
     if settings.app_env.lower() in {"production", "prod"}:
         raise RuntimeError("Refusing to run in a production application environment.")
-    if not settings.test_db_url:
-        raise RuntimeError("TEST_DB_URL is required for the benchmark.")
-    if settings.database_url != settings.test_db_url:
+    if not settings.benchmark_db_url:
+        raise RuntimeError("BENCHMARK_DB_URL is required for the benchmark.")
+
+    benchmark_target = _database_target(settings.benchmark_db_url, "BENCHMARK_DB_URL")
+    if settings.test_db_url and benchmark_target == _database_target(
+        settings.test_db_url, "TEST_DB_URL"
+    ):
+        raise RuntimeError("BENCHMARK_DB_URL must point to a database separate from TEST_DB_URL.")
+
+    configured_target = _database_target(settings.database_url, "DATABASE_URL")
+    if preflight and benchmark_target == configured_target:
+        raise RuntimeError("BENCHMARK_DB_URL must point to a database separate from DATABASE_URL.")
+    if not preflight and benchmark_target != configured_target:
         raise RuntimeError(
-            "Refusing to run unless DATABASE_URL exactly equals TEST_DB_URL. "
-            'Use: DATABASE_URL="$TEST_DB_URL".'
+            "The benchmark process DATABASE_URL must point to BENCHMARK_DB_URL. "
+            "Run the benchmark with `make benchmark`."
         )
+
     if settings.sender_backend.lower() == "whatsapp":
         raise RuntimeError("Refusing to run with the WhatsApp sender backend.")
     if not (settings.groq_api_key or settings.openrouter_api_key):
@@ -503,6 +527,7 @@ async def _benchmark(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check-config", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--warmup", type=int, default=1)
     parser.add_argument("--requests", type=int, default=7)
     parser.add_argument("--seed", type=int, default=3)
@@ -523,6 +548,9 @@ def main() -> int:
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     try:
+        if args.check_config:
+            _require_safe_environment(preflight=True)
+            return 0
         return asyncio.run(_benchmark(args))
     except (RuntimeError, OSError) as exc:
         print(f"benchmark configuration error: {exc}", file=sys.stderr)

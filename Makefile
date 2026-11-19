@@ -30,7 +30,7 @@ help:
 	@echo "  make lint               Run ruff check"
 	@echo "  make format             Run ruff format"
 	@echo "  make typecheck          Run mypy"
-	@echo "  make benchmark         Run the real-provider analytics latency benchmark"
+	@echo "  make benchmark         Run the real-provider benchmark against BENCHMARK_DB_URL"
 	@echo ""
 	@echo "DATABASE:"
 	@echo "  make migrate            Apply pending Alembic migrations"
@@ -81,7 +81,7 @@ migration:
 
 # ── Simulator & chaos ─────────────────────────────────────────────
 simulate:
-	python tools/chat_simulator.py --phone $(p) --message "$(msg)"
+	python tools/chat_simulator.py
 
 demo-seed:
 	python -m tools.demo_data seed
@@ -94,8 +94,20 @@ chaos:
 
 benchmark:
 	@test "$(BENCHMARK_ALLOW_LLM)" = "1" || (echo "Set BENCHMARK_ALLOW_LLM=1"; exit 2)
-	DATABASE_URL="$(TEST_DB_URL)" BENCHMARK_ALLOW_LLM=1 \
-		python -m tools.analytics_benchmark
+	@test -n "$(BENCHMARK_DB_URL)" || (echo "Set BENCHMARK_DB_URL to a dedicated local database"; exit 2)
+	BENCHMARK_DB_URL="$(BENCHMARK_DB_URL)" BENCHMARK_ALLOW_LLM=1 \
+		python -m tools.analytics_benchmark --check-config
+	DATABASE_URL="$(BENCHMARK_DB_URL)" alembic upgrade head
+	DATABASE_URL="$(BENCHMARK_DB_URL)" BENCHMARK_DB_URL="$(BENCHMARK_DB_URL)" \
+		BENCHMARK_ALLOW_LLM=1 python -m tools.analytics_benchmark $(BENCHMARK_ARGS)
+
+# ── Additional tool commands ────────────────────────────────────────
+
+eval:
+	python -m tools.eval_harness
+
+chat-sim:
+	python tools/chat_simulator.py
 
 # ── Clean ─────────────────────────────────────────────────────────
 clean:
