@@ -58,6 +58,7 @@ celerybeat-schedule*
 scripts/benchmark_providers.py
 benchmark.md
 benchmark-results/*
+eval-results/*
 
 # ── Logs ─────────────────────────────────────────────────────────
 *.log
