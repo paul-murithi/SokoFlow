@@ -23,12 +23,21 @@ def _resolve_period_name(args: dict[str, Any] | None) -> str:
     if isinstance(period, dict):
         if period.get("period_type") == "relative":
             rel = period.get("relative_period", "")
+            offset = period.get("period_offset", 0)
             mapping = {
                 "day": "today",
                 "week": "this week",
                 "month": "this month",
                 "year": "this year",
             }
+            if offset == -1:
+                previous_mapping = {
+                    "day": "yesterday",
+                    "week": "last week",
+                    "month": "last month",
+                    "year": "last year",
+                }
+                return previous_mapping.get(rel, f"the previous {rel or 'period'}")
             return mapping.get(rel, f"the requested {rel or 'period'}")
         if period.get("period_type") == "date_range":
             dr = period.get("date_range", {})

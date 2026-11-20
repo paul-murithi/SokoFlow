@@ -16,6 +16,10 @@ def _resolve_relative_local_boundaries(
     anchor_date: date,
     tz: ZoneInfo,
 ) -> tuple[datetime, datetime]:
+    """
+    Resolves the local start and end datetimes for a given relative period anchored to a
+    specific date. The end datetime is exclusive, following half-open interval semantics.
+    """
     if relative_period == RelativePeriod.DAY:
         local_start = datetime.combine(anchor_date, time.min, tzinfo=tz)
         local_end = local_start + timedelta(days=1)
@@ -60,6 +64,10 @@ def resolve_period_boundaries(
         if rel is None:
             raise ValueError("Missing relative period specification.")
         local_start, local_end = _resolve_relative_local_boundaries(rel, today, tz)
+        for _ in range(-period.period_offset):
+            local_start, local_end = _resolve_relative_local_boundaries(
+                rel, local_start.date() - timedelta(days=1), tz
+            )
 
     elif period.period_type == PeriodType.DATE_RANGE:
         dr = period.date_range
@@ -89,14 +97,14 @@ def resolve_previous_period_boundaries(
     """
     if period.period_type == PeriodType.RELATIVE:
         tz = ZoneInfo(local_tz_name)
-        now = reference_now.astimezone(tz) if reference_now else datetime.now(tz)
         relative_period = period.relative_period
         if relative_period is None:
             raise ValueError("Missing relative period specification.")
-        current_start, _ = _resolve_relative_local_boundaries(relative_period, now.date(), tz)
+        current_start, _ = resolve_period_boundaries(period, local_tz_name, reference_now)
+        current_start_local = current_start.astimezone(tz)
         previous_start, previous_end = _resolve_relative_local_boundaries(
             relative_period,
-            current_start.date() - timedelta(days=1),
+            current_start_local.date() - timedelta(days=1),
             tz,
         )
         utc = ZoneInfo("UTC")

@@ -72,6 +72,27 @@ def test_format_sales_summary_answered_empty():
     assert "No sales were recorded for this month." in en_text
 
 
+def test_format_sales_summary_previous_relative_period():
+    outcome = AnalyticsOutcome.answered(
+        tool="get_sales_summary",
+        data=GetSalesSummaryOutput(total_revenue=Decimal("100.00"), transaction_count=1),
+        call={
+            "name": "get_sales_summary",
+            "arguments": {
+                "period": {
+                    "period_type": "relative",
+                    "relative_period": "week",
+                    "period_offset": -1,
+                }
+            },
+        },
+    )
+
+    _, params = AnalyticsFormatter.format_outcome(outcome)
+
+    assert params["period_name"] == "last week"
+
+
 def test_format_stock_level_normal():
     data = GetStockLevelOutput(
         product_id=uuid4(),

@@ -7,7 +7,7 @@ of relative periods and explicit date ranges.
 from datetime import date
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.ai.errors import InvalidDateRangeError
 
@@ -47,6 +47,12 @@ class ReportingPeriod(BaseModel):
     period_type: PeriodType
     relative_period: RelativePeriod | None = None
     date_range: DateRange | None = None
+    period_offset: int = Field(
+        default=0,
+        ge=-1,
+        le=0,
+        description="Use -1 for the immediately previous calendar period; otherwise 0.",
+    )
 
     @model_validator(mode="after")
     def validate_period_structure(self) -> "ReportingPeriod":
@@ -60,4 +66,6 @@ class ReportingPeriod(BaseModel):
                 raise ValueError("date_range is required when period_type is 'date_range'.")
             if self.relative_period is not None:
                 raise ValueError("relative_period must be null when period_type is 'date_range'.")
+            if self.period_offset != 0:
+                raise ValueError("period_offset must be 0 when period_type is 'date_range'.")
         return self

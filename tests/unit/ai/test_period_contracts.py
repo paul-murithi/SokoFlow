@@ -51,6 +51,16 @@ def test_invalid_date_range_period_missing_range():
         ReportingPeriod(period_type=PeriodType.DATE_RANGE)
 
 
+def test_date_range_rejects_relative_period_offset():
+    dr = DateRange(start_date=date(2026, 9, 1), end_date=date(2026, 9, 30))
+    with pytest.raises(ValueError, match="period_offset must be 0"):
+        ReportingPeriod(
+            period_type=PeriodType.DATE_RANGE,
+            date_range=dr,
+            period_offset=-1,
+        )
+
+
 def test_resolve_period_boundaries_month():
     period = ReportingPeriod(
         period_type=PeriodType.RELATIVE,
@@ -64,6 +74,21 @@ def test_resolve_period_boundaries_month():
     # 2026-09-01 00:00:00 EAT is 2026-08-31 21:00:00 UTC (EAT is UTC+3)
     assert utc_start == datetime(2026, 8, 31, 21, 0, 0, tzinfo=ZoneInfo("UTC"))
     assert utc_end == datetime(2026, 9, 30, 21, 0, 0, tzinfo=ZoneInfo("UTC"))
+
+
+def test_resolve_previous_relative_week_boundaries():
+    period = ReportingPeriod(
+        period_type=PeriodType.RELATIVE,
+        relative_period=RelativePeriod.WEEK,
+        period_offset=-1,
+    )
+    reference_now = datetime(2026, 11, 3, 12, 0, 0, tzinfo=ZoneInfo("Africa/Nairobi"))
+
+    utc_start, utc_end = resolve_period_boundaries(period, reference_now=reference_now)
+
+    local_tz = ZoneInfo("Africa/Nairobi")
+    assert utc_start.astimezone(local_tz).date() == date(2026, 10, 26)
+    assert utc_end.astimezone(local_tz).date() == date(2026, 11, 2)
 
 
 def test_resolve_period_boundaries_date_range():
