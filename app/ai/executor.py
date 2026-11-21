@@ -28,12 +28,20 @@ from app.ai.validator import ToolValidator
 
 logger = logging.getLogger(__name__)
 
+#TODO: Introduce ToolValidator - Responsible for validating 
+# raw arguments against registered Pydantic input schemas and domain rules.
+# Helps decouple validation logic from ToolExecutor to enhance modularity and maintainability.
 
 class ToolExecutor:
     """Safely executes model-proposed tool calls against SokoFlow's internal service layer."""
 
-    def __init__(self, registry: ToolRegistry | None = None) -> None:
+    def __init__(
+        self,
+        registry: ToolRegistry | None = None,
+        validate_only: bool = False,
+    ) -> None:
         self.registry = registry or default_registry
+        self.validate_only = validate_only
 
     async def execute(
         self,
@@ -96,6 +104,17 @@ class ToolExecutor:
                     error_type=type(exc).__name__,
                     message=exc.message,
                 ),
+            )
+
+        if self.validate_only:
+            logger.info(
+                "ToolExecutor validated tool '%s' successfully in validate_only mode", tool_name
+            )
+            return ToolExecutionResult(
+                status="success",
+                tool=tool_name,
+                data=None,
+                validated_arguments=validated_input.model_dump(mode="json", exclude_none=True),
             )
 
         # Handler Execution

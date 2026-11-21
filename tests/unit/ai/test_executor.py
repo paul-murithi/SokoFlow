@@ -57,7 +57,13 @@ async def test_tool_executor_success():
     assert result.tool == "get_sales_summary"
     assert result.data.total_revenue == 1500
     assert result.data.transaction_count == 5
-    assert result.validated_arguments == raw_args
+    assert result.validated_arguments == {
+        "period": {
+            "period_type": "relative",
+            "relative_period": "day",
+            "period_offset": 0,
+        }
+    }
     assert result.error is None
     mock_handler.assert_called_once()
 
@@ -157,6 +163,40 @@ async def test_tool_executor_domain_validation_failure():
     assert result.is_failure is True
     assert result.error.error_type == "ProductNotFoundError"
     assert str(fake_product_id) in result.error.message
+
+
+@pytest.mark.asyncio
+async def test_tool_executor_validate_only_does_not_call_handler():
+    registry = ToolRegistry()
+    mock_handler = AsyncMock()
+
+    registry.register_tool(
+        name="get_sales_summary",
+        description="Sales summary test tool",
+        input_model=GetSalesSummaryInput,
+        output_model=GetSalesSummaryOutput,
+        handler=mock_handler,
+    )
+
+    executor = ToolExecutor(registry=registry, validate_only=True)
+    result = await executor.execute(
+        tool_name="get_sales_summary",
+        raw_args={"period": {"period_type": "relative", "relative_period": "day"}},
+        shop_id=uuid4(),
+        db=MagicMock(),
+    )
+
+    assert result.is_success is True
+    assert result.tool == "get_sales_summary"
+    assert result.data is None
+    assert result.validated_arguments == {
+        "period": {
+            "period_type": "relative",
+            "relative_period": "day",
+            "period_offset": 0,
+        }
+    }
+    mock_handler.assert_not_called()
 
 
 @pytest.mark.asyncio
