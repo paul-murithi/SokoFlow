@@ -16,7 +16,11 @@ SokoFlow is a backend ERP engine designed for small and medium-sized enterprises
 
 ### Loom Video Demo
 
-[Watch the 5-Minute SokoFlow Walkthrough](https://www.loom.com/share/your-loom-demo-id-here) _(https://www.loom.com/share/2aff352666d24821b91cb99c7373b33b)_
+[Watch the 5-Minute SokoFlow Walkthrough](https://www.loom.com/share/2aff352666d24821b91cb99c7373b33b) _(https://www.loom.com/share/2aff352666d24821b91cb99c7373b33b)_
+
+### AI Layer Video Demo
+
+[Watch the 3-Minute SokoFlow AI Analytics Update](https://youtu.be/zE7fH347E8c?si=KFr0bpLDyPqoHqSj)
 
 ### Interactive Web UI Simulator
 
