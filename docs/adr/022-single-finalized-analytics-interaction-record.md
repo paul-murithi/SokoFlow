@@ -1,7 +1,7 @@
 # ADR 022: Single Finalized Analytics Interaction Record
 
 **Date:** 2026-11-02
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 

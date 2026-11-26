@@ -1,12 +1,7 @@
 # ADR 004: Last Write Wins Strategy for Product Updates
 
-## Date
-
-2026-06-24
-
-## Status
-
-Accepted
+**Date:** 2026-06-24
+**Decision status:** Accepted
 
 ---
 
@@ -124,13 +119,8 @@ The system intentionally avoids premature optimization for concurrency scenarios
 
 ---
 
-## Future Evolution
+## Revisit Trigger
 
-If the product evolves toward higher concurrency usage (e.g., multi-branch businesses, warehouse coordination systems, or enterprise clients), the following upgrades may be introduced:
-
-- Optimistic locking via `version` or `updated_at` fields
-- Conflict detection and resolution UI
-- Audit logs for change tracking
-- Event sourcing for critical entities (e.g., inventory, pricing)
-
-At that stage, concurrency control will shift from implicit behavior (last write wins) to explicit conflict management.
+Reconsider this decision if concurrent product edits become common or lost
+updates cause measurable business impact. Select a conflict strategy in a new
+ADR based on observed usage; this record does not prescribe a future mechanism.

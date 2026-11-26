@@ -1,7 +1,7 @@
 # ADR 014: Failure Semantics and Bounded Repair Policy in Natural-Language Analytics
 
 **Date:** 2026-10-27
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 

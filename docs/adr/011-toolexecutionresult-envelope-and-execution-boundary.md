@@ -1,7 +1,7 @@
 # ADR 011: ToolExecutionResult Envelope and Execution Boundary
 
 **Date:** 2026-10-08
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 

@@ -1,7 +1,7 @@
-# ADR 004: Sales Data Modeling – Single Row vs Header–Detail
+# ADR 002: Sales Data Modeling – Single Row vs Header–Detail
 
 **Date:** 2026-06-03
-**Status:** Accepted
+**Decision status:** Accepted
 
 ## Context
 

@@ -1,7 +1,7 @@
 # ADR 020: Post-Call Provider Usage Accounting
 
 **Date:** 2026-11-02
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 

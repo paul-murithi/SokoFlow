@@ -1,7 +1,7 @@
 # ADR 010: LLM Provider Boundary and Normalized Contract
 
 **Date:** 2026-10-07
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 

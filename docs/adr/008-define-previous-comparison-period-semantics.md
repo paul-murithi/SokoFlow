@@ -1,7 +1,7 @@
 # ADR 008: Define Previous Comparison Period Semantics
 
 **Date:** 2026-09-30
-**Status:** Accepted
+**Decision status:** Accepted
 
 ## Context
 
@@ -239,9 +239,10 @@ When `comparison_period` is explicitly provided, it continues to be resolved dir
 - Tests cover previous day, week, month, and year boundaries, including February in
   a leap year and timezone-aware UTC conversion.
 
-### Future Work
+### Revisit Trigger
 
-- If rolling-window reporting is introduced, define a separate duration-based comparison concept rather than reusing the calendar-period resolver.
+If rolling-window reporting is introduced, define its duration-based semantics
+separately rather than changing the meaning of "previous calendar period."
 
 ---
 

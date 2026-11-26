@@ -1,7 +1,7 @@
 # ADR 018: Count Every Analytics-Processing Message
 
 **Date:** 2026-11-02
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 

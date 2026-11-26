@@ -1,5 +1,8 @@
 # ADR 012: Analytics Routing Inside IDLE Intent Dispatch
 
+**Date:** Not recorded
+**Decision status:** Accepted
+
 ## Context
 
 Week 3 of Phase 3 adds natural-language analytics to the existing WhatsApp/FSM pipeline. Analytics questions are open-ended, so the regex-based Intent Resolver cannot recognize them. Today, any message the resolver does not match is classified as `UNKNOWN`, and `_handle_idle()` responds by raising `InvalidInputError`, which produces `MessageKey.UNKNOWN_INTENT` and affects the error counter.
@@ -89,15 +92,9 @@ The FSM processes the message as it does today. If the worker sees `MessageKey.U
 - The FSM step is no longer near-instant, so the CAS conflict window widens for users who send messages in quick succession.
 - Error counter behavior is now more nuanced and must be tested per outcome category.
 
-### Future Work (optional)
-- Decide and document behavior on CAS conflict during the slower analytics path.
-- Verify the conversation task's time limit and retry settings cover the worst-case LLM round trip plus one bounded retry.
-- Revisit an escape hatch for analytics questions sent while a user is mid-flow in a parked state.
+### Revisit Triggers
 
----
-
-## Notes (optional)
-
-- The routing policy's initial rules (flag only, or flag plus per-shop limits) are not yet decided.
-- What the error counter threshold actually triggers should be checked in the existing code, because it determines how much the "no tool call" and infrastructure-failure rows matter.
-- Related decisions: analytics handler as adapter over an independent Orchestrator, stateless happy path with follow-up context stored as the last structured call, deterministic formatter producing `message_key` and `params`.
+Revisit routing behavior if analytics requests produce CAS conflicts, exceed
+worker time limits, or need to be accepted while a user is in a non-IDLE flow.
+Any change to routing policy or error-counter semantics should be captured as a
+new decision when the requirement is known.

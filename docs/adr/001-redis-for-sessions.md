@@ -1,7 +1,7 @@
 # ADR 001: Use Redis for FSM Session Storage
 
 **Date:** 2026-05-25
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 

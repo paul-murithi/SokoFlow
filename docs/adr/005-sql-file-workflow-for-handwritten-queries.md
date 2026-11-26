@@ -1,7 +1,7 @@
 # ADR 005: SQL File Workflow for Handwritten Queries
 
 **Date:** 2026-07-13
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 

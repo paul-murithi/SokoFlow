@@ -1,7 +1,7 @@
 # ADR 003: Sales Unit Price Source
 
 **Date:** 2026-06-19
-**Status:** Accepted
+**Decision status:** Accepted
 
 ## Context
 
@@ -99,14 +99,8 @@ This approach minimizes complexity while satisfying all current business require
 * Discounts and custom pricing cannot be represented initially.
 * Future support for price overrides will require a separate design decision and ADR.
 
-### Future Evolution
+### Revisit Trigger
 
-If discounting or negotiated pricing becomes a requirement, the sales service may be extended with an explicit override mechanism such as:
-
-```python
-record_sale(
-    product_id,
-    quantity,
-    override_price=None,
-)
-```
+If discounts or negotiated prices become a requirement, record that as a
+separate decision before introducing a price override. Until then, the product
+catalog remains the source of the sale's unit-price snapshot.

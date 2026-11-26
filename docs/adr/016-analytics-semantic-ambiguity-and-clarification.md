@@ -1,7 +1,7 @@
 # ADR 016: Analytics Semantic Ambiguity and Clarification
 
 **Date:** 2026-10-28
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 
@@ -40,7 +40,7 @@ question was ambiguous.
 * Existing follow-up context and bounded retry behavior are unchanged.
 * Tool-call validity must not be treated as proof of semantic correctness.
 
-## Future Revisit
+## Revisit Trigger
 
 If the LLM contract provides a supported clarification signal, add a dedicated
 clarification outcome and presentation path rather than building a general

@@ -1,7 +1,7 @@
 # ADR 015: Preservation of Last Successful Analytics Context Across Execution Failures
 
 **Date:** 2026-10-27
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 

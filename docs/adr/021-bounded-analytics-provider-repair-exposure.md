@@ -1,7 +1,7 @@
 # ADR 021: Bounded Analytics Provider Repair Exposure
 
 **Date:** 2026-11-02
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 

@@ -1,7 +1,7 @@
 # ADR 013: Analytics Follow-up Context Argument Representation
 
 **Date:** 2026-10-21
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 
@@ -31,7 +31,7 @@ follow-up context for this MVP.
 * Relative periods may resolve to a different concrete interval if a request
   is executed again after the calendar period changes.
 
-## Future Revisit
+## Revisit Trigger
 
 If deterministic replay, auditability, or exact "same period" follow-ups become
 requirements, extend the context with an immutable execution snapshot containing

@@ -1,7 +1,7 @@
 # ADR 009: LLM Provider Selection for Analytics Function Calling
 
 **Date:** 2026-10-05
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 

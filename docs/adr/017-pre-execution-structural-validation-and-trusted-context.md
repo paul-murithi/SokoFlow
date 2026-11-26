@@ -1,7 +1,7 @@
 # ADR 017: Pre-Execution Structural Validation and Trusted Context Enforcement
 
 **Date:** 2026-10-30
-**Status:** Accepted
+**Decision status:** Accepted
 
 ---
 

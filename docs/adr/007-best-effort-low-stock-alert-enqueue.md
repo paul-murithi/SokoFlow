@@ -1,7 +1,7 @@
 # ADR 007: Best-Effort Low-Stock Alert Enqueue
 
 **Date:** 2026-09-15
-**Status:** Accepted
+**Decision status:** Accepted
 
 
 ## Context
@@ -99,11 +99,11 @@ This is an intentional 80/20 tradeoff: accept a small possibility of losing an a
 * The system does not provide guaranteed notification delivery.
 * Recovering missed alerts would require manual investigation or a future reliability mechanism.
 
-### Future Work
+### Revisit Trigger
 
-* Revisit durable alert delivery if SokoFlow requires stronger notification guarantees.
-* Consider a transactional outbox or durable alert/event table if notification loss becomes unacceptable.
-* Re-evaluate this decision if the system grows to require reliable asynchronous event processing across multiple consumers.
+Revisit durable delivery if alert loss becomes operationally unacceptable or
+the product begins to promise guaranteed notification delivery. This ADR does
+not preselect an outbox or another future mechanism.
 
 ---
 

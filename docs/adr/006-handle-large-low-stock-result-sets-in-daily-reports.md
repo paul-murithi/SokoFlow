@@ -1,7 +1,7 @@
-# ADR 006: Handle Large Low-Stock Result Sets in Daily Reports
+# ADR 006: Return All Low-Stock Products in Daily Reports
 
 **Date:** 2026-09-13
-**Status:** Accepted
+**Decision status:** Accepted
 
 ## Context
 
@@ -97,13 +97,12 @@ The current implementation therefore accepts the possibility that the low-stock 
 * The low-stock section may eventually dominate the daily report.
 * Report generation and PDF rendering may require additional optimization at larger scales.
 
-### Future Work
+### Revisit Trigger
 
-* Define business rules for handling large low-stock result sets.
-* Consider limiting the number of products displayed in the daily report.
-* Consider displaying a summary such as “15 additional products are low on stock.”
-* Consider providing the complete low-stock inventory through a dedicated inventory report or another interface.
-* Revisit this decision once realistic usage or user feedback demonstrates that large low-stock lists are a problem.
+Revisit this decision if measured PDF size, rendering time, or shopkeeper
+feedback shows that returning every low-stock product makes the daily report
+hard to use. Any limit or summary must preserve a way to access the complete
+list.
 
 ---
 
