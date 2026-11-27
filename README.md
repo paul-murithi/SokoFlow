@@ -527,8 +527,10 @@ sokoflow/
 │   └── workers/           # Celery task definitions, queues, & MessageSender integration
 ├── alembic/               # Alembic database migration scripts & versions
 ├── celery_app/            # Celery instance configuration & queue bindings
-├── docs/                  # Architecture Decision Records (ADRs) & technical documentation
-│   └── adr/               # Numbered ADR markdown files (001 - 007)
+├── docs/
+│   ├── architecture/      # Current, code-backed architecture baseline
+│   ├── adr/               # Numbered records of architecture decisions
+│   └── proposals/         # Deferred and unapproved engineering projects
 ├── tools/                 # Developer tools (chat simulator Web UI/CLI)
 ├── tests/                 # Automated test suite (unit, integration, fixtures & factories)
 ├── Dockerfile             # Multi-stage production container build definition
@@ -565,20 +567,21 @@ sokoflow/
 - **Single-Item Transactions:** The current FSM records sales one item per conversation flow. Multi-item cart capabilities are intentionally deferred ([ADR 002](docs/adr/002-sales-data-modeling-single%20Row-vs-header-detail.md)).
 - **Best-Effort Alerts:** Low-stock notifications are dispatched best-effort post-commit without a transactional outbox table ([ADR 007](docs/adr/007-best-effort-low-stock-alert-enqueue.md)).
 - **Last Write Wins Updates:** Concurrent product updates overwrite without optimistic version locking ([ADR 004](docs/adr/004-last-write-for-updates.md)).
+- **Financial Integrity Deferred:** Payment capture, till reconciliation, and a complete inventory movement ledger are deferred until after the MVP ([ADR 025](docs/adr/025-sokoflow-financial-integrity.md), [proposal](docs/proposals/financial-integrity.md)). Recorded sales totals are not payment or settlement confirmation.
 
 ---
 
-## 13. Architecture Decision Records (ADRs)
+## 13. Architecture Documentation
 
-Key design decisions are documented in detail within [`docs/adr/`](docs/adr/):
+The documentation separates current implementation, decision history, and
+potential future work:
 
-- [ADR 001: Use Redis for FSM Session Storage](docs/adr/001-redis-for-sessions.md)
-- [ADR 002: Sales Data Modeling – Single Row vs Header-Detail](docs/adr/002-sales-data-modeling-single%20Row-vs-header-detail.md)
-- [ADR 003: Sales Unit Price Source Snapshotting](docs/adr/003-sales-pricing-source.md)
-- [ADR 004: Last Write Wins Strategy for Product Updates](docs/adr/004-last-write-for-updates.md)
-- [ADR 005: SQL File Workflow for Handwritten Queries](docs/adr/005-sql-file-workflow-for-handwritten-queries.md)
-- [ADR 006: Handle Large Low-Stock Result Sets in Daily Reports](docs/adr/006-handle-large-low-stock-result-sets-in-daily-reports.md)
-- [ADR 007: Best-Effort Low-Stock Alert Enqueue](docs/adr/007-best-effort-low-stock-alert-enqueue.md)
+- [Current architecture baseline](docs/architecture/current-state.md) — a
+  point-in-time description of behavior in the codebase.
+- [ADR index](docs/adr/README.md) — the numbered decision records, their
+  status, and guidance for adding or superseding decisions.
+- [Engineering proposals](docs/proposals/README.md) — deferred or unapproved
+  work that is not itself an accepted architecture decision.
 
 ---
 

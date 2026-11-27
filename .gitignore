@@ -63,3 +63,7 @@ eval-results/*
 # ── Logs ─────────────────────────────────────────────────────────
 *.log
 logs/
+
+# ── Personal Docs ───────────────────────────────────────────────
+SOKOFLOW_FINANCIAL_RECONCILIATION_ENGINE_FEASIBILITY.md
+LLM_RATE_LIMITING_REVIEW.md
