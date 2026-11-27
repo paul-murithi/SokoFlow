@@ -43,6 +43,14 @@ def test_stock_level_input_uuid_validation():
         GetStockLevelInput.model_validate({"product_id": "invalid-uuid"})
 
 
+def test_stock_level_input_accepts_product_name_without_placeholder_id():
+    inp = GetStockLevelInput.model_validate({"product_name": "Sugar 1kg"})
+
+    assert inp.product_id is None
+    assert inp.product_name == "Sugar 1kg"
+    assert inp.model_dump(mode="json", exclude_none=True) == {"product_name": "Sugar 1kg"}
+
+
 def test_low_stock_items_input_rejects_extra_args():
     inp = GetLowStockItemsInput.model_validate({})
     assert isinstance(inp, GetLowStockItemsInput)

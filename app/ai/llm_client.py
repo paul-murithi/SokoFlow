@@ -6,9 +6,14 @@ a SokoFlow-owned input/output contract interface.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import math
+import random
 import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 import httpx
@@ -28,25 +33,39 @@ DEFAULT_SYSTEM_PROMPT = """You select exactly one SokoFlow analytics function fo
 merchant question.
 Use only the supplied tools. Never provide shop_id; shop scope is controlled by the
 application.
-Return a function call when the request can be represented by a tool; otherwise reply briefly
-that clarification is needed.
+For a clear analytics request, always return the matching function call. If intent or a
+required detail is genuinely unclear, ask a brief clarification instead of guessing.
 
 CRITICAL PARAMETER RULES:
 1. For tools requiring a 'period' parameter (get_sales_summary, get_top_products,
    get_sales_trend, get_slow_moving_items):
-   'period' MUST be a JSON object with 'period_type' ('relative' or 'date_range') and
-   'relative_period' ('day', 'week', 'month', 'year').
+   'period' MUST be a JSON object. For relative periods, use 'period_type': 'relative',
+   'relative_period' ('day', 'week', 'month', 'year'), and optional 'period_offset'
+   (0 for the current period, -1 for the immediately previous period). For explicit dates,
+   use 'period_type': 'date_range', 'date_range' with ISO 'start_date' and 'end_date', and
+   omit 'relative_period'.
    Examples:
    - 'today': {"period_type": "relative", "relative_period": "day"}
    - 'this week': {"period_type": "relative", "relative_period": "week"}
+   - 'last week': {"period_type": "relative", "relative_period": "week", "period_offset": -1}
    - 'this month': {"period_type": "relative", "relative_period": "month"}
-   - 'last year' / 'this year': {"period_type": "relative", "relative_period": "year"}
+   - 'last year': {"period_type": "relative", "relative_period": "year", "period_offset": -1}
+   - 'between 2026-11-01 and 2026-11-03': {"period_type": "date_range", "date_range":
+     {"start_date": "2026-11-01", "end_date": "2026-11-03"}}
 
-2. For get_stock_level (used for stock level or product price queries for a specific
-   product):
-   If a product UUID is not explicitly provided in user text, pass placeholder UUID
-   '00000000-0000-0000-0000-000000000000' for product_id.
+2. Select get_sales_trend for requests to compare sales periods or assess whether sales are
+   rising or falling. Its 'period' is the primary/current period; the tool compares it with
+   the immediately previous period unless a distinct comparison_period is requested.
+
+3. For get_top_products, map 'most units' or 'units sold' to ranking_dimension 'units',
+   and 'highest revenue' or 'sales value' to 'revenue'. Omit ranking_dimension if both
+   rankings are requested. For a clear 'top items' request with no period stated, use day.
+
+4. For get_stock_level, provide product_name when the user gives a product name and no UUID.
+   Never invent or use a placeholder product_id. The application resolves product names.
 """
+
+MAX_RETRY_AFTER_SECONDS = 60.0
 
 
 class LLMClient:
@@ -131,7 +150,11 @@ class LLMClient:
     async def _post_payload(
         self, payload: dict[str, Any], headers: dict[str, str]
     ) -> dict[str, Any]:
-        """Executes HTTP request to provider and handles low-level transport errors."""
+        """Executes HTTP request to provider with retry handling.
+
+        Retries HTTP 429 responses using a bounded Retry-After or exponential backoff.
+        Other HTTP and transport failures are translated without retrying.
+        """
         client_created = False
         client = self._http_client
         if client is None:
@@ -139,37 +162,77 @@ class LLMClient:
             client_created = True
 
         try:
-            response = await client.post(
-                self.endpoint,
-                headers=headers,
-                json=payload,
+            return await asyncio.wait_for(
+                self._post_payload_with_retries(client, payload, headers),
+                timeout=settings.llm_request_deadline_seconds,
             )
-        except httpx.TimeoutException as exc:
-            logger.warning("LLM provider request timed out after %.1fs", self.timeout)
+        except TimeoutError as exc:
+            logger.warning(
+                "LLM provider request exceeded its %.1fs overall deadline",
+                settings.llm_request_deadline_seconds,
+            )
             raise LLMProviderTimeoutError(
-                f"LLM provider request timed out after {self.timeout}s.", original_exception=exc
-            ) from exc
-        except httpx.RequestError as exc:
-            logger.warning("LLM provider transport error: %s", exc)
-            raise LLMProviderUnavailableError(
-                f"LLM provider is unreachable: {exc}", original_exception=exc
+                "LLM provider request exceeded its overall deadline.",
+                original_exception=exc,
             ) from exc
         finally:
             if client_created:
                 await client.aclose()
+
+    async def _post_payload_with_retries(
+        self,
+        client: httpx.AsyncClient,
+        payload: dict[str, Any],
+        headers: dict[str, str],
+    ) -> dict[str, Any]:
+        """Posts and handles retries within the caller's overall request deadline."""
+        max_retries = settings.llm_max_retries
+        attempt = 0
+        while True:
+            try:
+                response = await client.post(self.endpoint, headers=headers, json=payload)
+            except httpx.TimeoutException as exc:
+                logger.warning("LLM provider request timed out after %.1fs", self.timeout)
+                raise LLMProviderTimeoutError(
+                    f"LLM provider request timed out after {self.timeout}s.",
+                    original_exception=exc,
+                ) from exc
+            except httpx.RequestError as exc:
+                logger.warning("LLM provider transport error: %s", exc)
+                raise LLMProviderUnavailableError(
+                    f"LLM provider is unreachable: {exc}", original_exception=exc
+                ) from exc
+
+            if response.status_code != 429:
+                break
+            if attempt >= max_retries:
+                raise LLMProviderAPIError(
+                    f"Exceeded max retries ({max_retries}) after rate-limit responses.",
+                    status_code=429,
+                )
+
+            wait_seconds = self._retry_after_seconds(response.headers.get("Retry-After"))
+            if wait_seconds is None:
+                backoff = settings.llm_initial_backoff * (2**attempt)
+                wait_seconds = backoff + backoff * 0.1 * random.random()
+            wait_seconds = min(max(wait_seconds, 0.0), MAX_RETRY_AFTER_SECONDS)
+            logger.warning(
+                "Rate limit hit (HTTP 429). Waiting %.2f seconds before retry #%d",
+                wait_seconds,
+                attempt + 1,
+            )
+            await asyncio.sleep(wait_seconds)
+            attempt += 1
 
         if response.status_code >= 500:
             logger.error("LLM provider 5xx response: HTTP %d", response.status_code)
             raise LLMProviderUnavailableError(
                 f"LLM provider service error: HTTP {response.status_code}"
             )
-
         if response.status_code >= 400:
-            logger.error(
-                "LLM provider 4xx response: HTTP %d - %s", response.status_code, response.text
-            )
+            logger.error("LLM provider 4xx response: HTTP %d", response.status_code)
             raise LLMProviderAPIError(
-                f"LLM provider API error: HTTP {response.status_code} - {response.text[:200]}",
+                f"LLM provider API error: HTTP {response.status_code}",
                 status_code=response.status_code,
             )
 
@@ -183,6 +246,25 @@ class LLMClient:
             raise LLMResponseFormatError(
                 f"Failed to parse LLM provider JSON response: {exc}", original_exception=exc
             ) from exc
+
+    @staticmethod
+    def _retry_after_seconds(value: str | None) -> float | None:
+        """Parse Retry-After delta-seconds or HTTP-date, rejecting invalid values."""
+        if value is None:
+            return None
+        try:
+            seconds = float(value)
+        except ValueError:
+            try:
+                retry_at = parsedate_to_datetime(value)
+                if retry_at.tzinfo is None:
+                    retry_at = retry_at.replace(tzinfo=timezone.utc)
+                seconds = (retry_at - datetime.now(timezone.utc)).total_seconds()
+            except (TypeError, ValueError, OverflowError):
+                return None
+        if not math.isfinite(seconds) or seconds < 0:
+            return None
+        return seconds
 
     def _normalize_response(self, raw_payload: dict[str, Any]) -> LLMResponse:
         """Translates raw OpenAI-compatible response dict into normalized LLMResponse."""

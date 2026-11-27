@@ -148,8 +148,9 @@ def build_default_registry() -> ToolRegistry:
     registry.register_tool(
         name="get_top_products",
         description=(
-            "Returns product rankings by units sold and/or revenue over a requested "
-            "reporting period."
+            "Returns product rankings over a requested reporting period. Use "
+            "ranking_dimension='units' for number sold or 'revenue' for sales value; omit "
+            "ranking_dimension to return both. The optional limit is a positive integer."
         ),
         input_model=GetTopProductsInput,
         output_model=GetTopProductsOutput,
@@ -159,8 +160,9 @@ def build_default_registry() -> ToolRegistry:
     registry.register_tool(
         name="get_stock_level",
         description=(
-            "Retrieves current stock level, low-stock threshold, and price for a specific "
-            "product ID."
+            "Retrieves current stock level, low-stock threshold, and price for a product. "
+            "Pass product_name when the user provides a name, or product_id only when an "
+            "actual UUID is known; do not invent an ID."
         ),
         input_model=GetStockLevelInput,
         output_model=GetStockLevelOutput,
@@ -179,7 +181,12 @@ def build_default_registry() -> ToolRegistry:
 
     registry.register_tool(
         name="get_sales_trend",
-        description="Compares sales performance (revenue and transaction volume) between periods.",
+        description=(
+            "Compares sales performance (revenue and transaction volume) between periods. "
+            "Use for requests to compare sales or determine whether they are rising or "
+            "falling. The period is the current period; comparison_period defaults to the "
+            "immediately previous calendar period."
+        ),
         input_model=GetSalesTrendInput,
         output_model=GetSalesTrendOutput,
         handler=handle_get_sales_trend,

@@ -1,5 +1,8 @@
 """Unit tests for LLMClient provider boundary."""
 
+import asyncio
+from unittest.mock import AsyncMock
+
 import httpx
 import pytest
 
@@ -10,7 +13,15 @@ from app.ai.errors import (
     LLMProviderUnavailableError,
     LLMResponseFormatError,
 )
-from app.ai.llm_client import LLMClient
+from app.ai.llm_client import DEFAULT_SYSTEM_PROMPT, LLMClient
+
+
+def test_default_prompt_uses_supported_tool_contracts():
+    assert "Never invent or use a placeholder product_id" in DEFAULT_SYSTEM_PROMPT
+    assert '"period_offset": -1' in DEFAULT_SYSTEM_PROMPT
+    assert '"period_type": "date_range"' in DEFAULT_SYSTEM_PROMPT
+    assert "ranking_dimension 'units'" in DEFAULT_SYSTEM_PROMPT
+    assert "no period stated, use day" in DEFAULT_SYSTEM_PROMPT
 
 
 @pytest.mark.asyncio
@@ -96,6 +107,141 @@ async def test_llm_client_successful_text_response():
         assert response.text == "Please clarify which product you mean."
         assert response.has_tool_calls is False
         assert response.primary_tool_call is None
+
+
+@pytest.mark.asyncio
+async def test_llm_client_retries_rate_limited_request(monkeypatch):
+    calls = 0
+
+    async def mock_handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(429, headers={"Retry-After": "0"})
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "ok"}}], "usage": {}},
+        )
+
+    monkeypatch.setattr("app.core.config.settings.llm_max_retries", 1)
+    transport = httpx.MockTransport(mock_handler)
+    async with httpx.AsyncClient(transport=transport) as http_client:
+        client = LLMClient(api_key="test-key", http_client=http_client)
+        response = await client.generate(
+            messages=[LLMMessage(role="user", content="How much did I sell today?")]
+        )
+
+    assert response.text == "ok"
+    assert calls == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "post_error",
+    [
+        httpx.TimeoutException("timed out"),
+        httpx.ConnectError("connection failed"),
+        asyncio.CancelledError(),
+    ],
+)
+async def test_locally_created_http_client_is_closed_on_exceptions(monkeypatch, post_error):
+    local_client = AsyncMock()
+    local_client.post.side_effect = post_error
+    monkeypatch.setattr("app.ai.llm_client.httpx.AsyncClient", lambda **_: local_client)
+    client = LLMClient(api_key="test-key")
+
+    with pytest.raises(
+        (LLMProviderTimeoutError, LLMProviderUnavailableError, asyncio.CancelledError)
+    ):
+        await client.generate(messages=[LLMMessage(role="user", content="Test")])
+
+    local_client.aclose.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_locally_created_http_client_is_closed_after_retry_exhaustion(monkeypatch):
+    local_client = AsyncMock()
+    local_client.post.return_value = httpx.Response(429, request=httpx.Request("POST", "https://x"))
+    monkeypatch.setattr("app.ai.llm_client.httpx.AsyncClient", lambda **_: local_client)
+    monkeypatch.setattr("app.core.config.settings.llm_max_retries", 0)
+    client = LLMClient(api_key="test-key")
+
+    with pytest.raises(LLMProviderAPIError):
+        await client.generate(messages=[LLMMessage(role="user", content="Test")])
+
+    local_client.aclose.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_overall_deadline_interrupts_retry_wait_and_closes_client(monkeypatch):
+    local_client = AsyncMock()
+    local_client.post.return_value = httpx.Response(
+        429,
+        headers={"Retry-After": "60"},
+        request=httpx.Request("POST", "https://x"),
+    )
+    monkeypatch.setattr("app.ai.llm_client.httpx.AsyncClient", lambda **_: local_client)
+    monkeypatch.setattr("app.core.config.settings.llm_request_deadline_seconds", 0.01)
+    client = LLMClient(api_key="test-key")
+
+    with pytest.raises(LLMProviderTimeoutError, match="overall deadline"):
+        await client.generate(messages=[LLMMessage(role="user", content="Test")])
+
+    local_client.post.assert_awaited_once()
+    local_client.aclose.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_retry_after_is_capped_and_provider_error_body_is_not_exposed(monkeypatch, caplog):
+    local_client = AsyncMock()
+    local_client.post.side_effect = [
+        httpx.Response(
+            429,
+            headers={"Retry-After": "3600"},
+            request=httpx.Request("POST", "https://x"),
+        ),
+        httpx.Response(
+            400,
+            text="sensitive echoed request",
+            request=httpx.Request("POST", "https://x"),
+        ),
+    ]
+    monkeypatch.setattr("app.ai.llm_client.httpx.AsyncClient", lambda **_: local_client)
+    monkeypatch.setattr("app.core.config.settings.llm_max_retries", 1)
+    sleep = AsyncMock()
+    monkeypatch.setattr("app.ai.llm_client.asyncio.sleep", sleep)
+    client = LLMClient(api_key="test-key")
+
+    with pytest.raises(LLMProviderAPIError) as exc_info:
+        await client.generate(messages=[LLMMessage(role="user", content="Test")])
+
+    sleep.assert_awaited_once_with(60.0)
+    assert "sensitive echoed request" not in str(exc_info.value)
+    assert "sensitive echoed request" not in caplog.text
+    local_client.aclose.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["0", "-5", "3600", "inf", "nan", "not-a-number"],
+)
+def test_retry_after_parser_accepts_only_finite_nonnegative_values(value):
+    parsed = LLMClient._retry_after_seconds(value)
+    if value == "0" or value == "3600":
+        assert parsed == float(value)
+    else:
+        assert parsed is None
+
+
+def test_retry_after_parser_accepts_http_date():
+    from datetime import datetime, timedelta, timezone
+    from email.utils import format_datetime
+
+    retry_at = datetime.now(timezone.utc) + timedelta(seconds=30)
+    parsed = LLMClient._retry_after_seconds(format_datetime(retry_at, usegmt=True))
+
+    assert parsed is not None
+    assert 0 < parsed <= 30
 
 
 @pytest.mark.asyncio

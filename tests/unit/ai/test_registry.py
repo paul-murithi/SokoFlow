@@ -40,6 +40,25 @@ def test_get_openai_tools_format():
     assert "parameters" in first_tool["function"]
 
 
+def test_tool_descriptions_expose_valid_ranking_values_and_name_lookup():
+    tools = {
+        tool["function"]["name"]: tool["function"] for tool in default_registry.get_openai_tools()
+    }
+
+    top_products = tools["get_top_products"]
+    assert "ranking_dimension='units'" in top_products["description"]
+    assert "'revenue'" in top_products["description"]
+    ranking_schema = top_products["parameters"]["$defs"]["RankingDimension"]
+    assert ranking_schema["enum"] == ["units", "revenue"]
+
+    stock_level = tools["get_stock_level"]
+    assert "product_name" in stock_level["description"]
+    assert "do not invent an ID" in stock_level["description"]
+
+    sales_trend = tools["get_sales_trend"]
+    assert "rising or falling" in sales_trend["description"]
+
+
 @pytest.mark.asyncio
 async def test_execute_tool_success():
     mock_db = AsyncMock()

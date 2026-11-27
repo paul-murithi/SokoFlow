@@ -62,6 +62,15 @@ class Settings(BaseSettings):
     analytics_max_output_tokens: int = 256
     analytics_max_input_chars: int = 12000
 
+    # LLM transport retry settings
+    llm_max_retries: int = 3
+    llm_initial_backoff: float = 1.0
+    llm_request_deadline_seconds: float = 60.0
+
+    # Evaluation specific settings
+    evaluation_tpm_limit: int = 8000  # Tokens per minute limit for provider
+    evaluation_token_safety_margin: float = 0.9
+
     # Benchmark
     benchmark_allow_llm: bool = False
 
